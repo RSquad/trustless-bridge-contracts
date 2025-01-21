@@ -38,4 +38,20 @@ export class LiteClient implements Contract {
       body: beginCell().endCell(),
     });
   }
+
+  async sendNewKeyBlock(
+    provider: ContractProvider,
+    via: Sender,
+    value: bigint,
+    keyBlock: Cell,
+  ) {
+    await provider.internal(via, {
+      value,
+      sendMode: SendMode.PAY_GAS_SEPARATELY,
+      body: beginCell()
+        .storeUint(0x2d69cd97, 32)
+        .storeRef(keyBlock)
+        .endCell(),
+    });
+  }
 }

@@ -1,5 +1,60 @@
 #include "imports/stdlib.fc";
 
-() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+const int err::unknown_operation = 0xffff;
 
+const int op::new_key_block = "op::new_key_block"c;
+const int op::check_block = "op::check_block"c;
+const int op::check_shard = "op::check_shard"c;
+
+() load_globals() impure {
+  var ds = get_data().begin_parse();
+  ds.end_parse();
+}
+
+() store_globals() impure {
+  builder data = begin_cell();
+  set_data(data.end_cell());
+}
+
+
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+  if ( in_msg_body.slice_empty?() ) { ;; accept simple transfer
+    return ();
+  }
+  slice cs = in_msg_full.begin_parse();
+  int flags = cs~load_uint(4);
+  if ( flags & 1 ) { ;; ignore all bounced messages
+    return ();
+  }
+
+  ;; slice sender_address = cs~load_msg_addr();
+  int op = in_msg_body~load_uint(32);
+  int query_id = in_msg_body~load_uint(64);
+
+  if ( op == op::new_key_block ) {
+    ~dump(in_msg_body);
+    cell block = in_msg_body~load_ref();
+    slice block_s = block.begin_parse();
+    block_s~load_ref();
+    block_s~load_ref();
+    block_s~load_ref();
+    cell extra = block_s~load_ref();
+    slice extra_s = extra.begin_parse();
+    int tag = extra_s~load_uint(32);
+    throw_unless(tag == 0x4a33f6fd, "invalid block type");
+    int is_keyblock = extra_s~load_uint(1);
+    throw_unless(is_keyblock, "is not keyblock");
+    
+    ;; TODO: parse config 34; store validators
+    return ();
+  }
+  if ( op == op::check_block ) {
+    return ();
+  }
+  if ( op == op::check_shard ) {
+    return ();
+  }
+
+  throw(err::unknown_operation);
 }
