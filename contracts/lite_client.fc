@@ -33,20 +33,46 @@ const int op::check_shard = "op::check_shard"c;
   int query_id = in_msg_body~load_uint(64);
 
   if ( op == op::new_key_block ) {
-    ~dump(in_msg_body);
     cell block = in_msg_body~load_ref();
-    slice block_s = block.begin_parse();
-    block_s~load_ref();
-    block_s~load_ref();
-    block_s~load_ref();
-    cell extra = block_s~load_ref();
-    slice extra_s = extra.begin_parse();
-    int tag = extra_s~load_uint(32);
-    throw_unless(tag == 0x4a33f6fd, "invalid block type");
-    int is_keyblock = extra_s~load_uint(1);
-    throw_unless(is_keyblock, "is not keyblock");
+    ;; slice cs = block.begin_parse();
+    ;; int hash = slice_hash(cs);
+    ;; ~dump(cs);
+    (slice cs, int special) = block.begin_parse_special();
+    cell test = cs~load_ref();
+    ~dump(cell_hash(test));
+
+
+    ;; slice block_s = block.begin_parse();
+    ;; block_s~load_ref();
+    ;; block_s~load_ref();
+    ;; block_s~load_ref();
+    ;; cell extra = block_s~load_ref();
+    ;; slice extra_s = extra.begin_parse();
+    ;; int tag = extra_s~load_uint(32);
+    ;; int hash = cell_hash(block);
+    ;; ~strdump("success");
+    ;; ~dump(hash);
+    ;; ~dump(block);
+
+    ;; throw_unless(tag == 0x4a33f6fd, "invalid block type");
+    ;; int is_keyblock = extra_s~load_uint(1);
+    ;; ;; throw_unless(is_keyblock, "is not keyblock");
+
     
-    ;; TODO: parse config 34; store validators
+    ;; ;; TODO: parse config 34; store validators
+    ;; ;; shard_hashes:ShardHashes
+    ;; extra_s~load_ref();
+    ;; ;; shard_fees:ShardFees
+    ;; extra_s~load_ref();
+    ;; ;; prev_blk_signatures
+    ;; cell config_cell = extra_s~load_ref();
+    ;; ;; if (~extra_s.slice_refs_empty?()) {
+    ;; ;;   ;; config:key_block?ConfigParams
+    ;; ;;   config_cell = extra_s~load_ref();
+    ;; ;; }
+    
+
+    
     return ();
   }
   if ( op == op::check_block ) {

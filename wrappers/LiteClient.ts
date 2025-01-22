@@ -50,6 +50,7 @@ export class LiteClient implements Contract {
       sendMode: SendMode.PAY_GAS_SEPARATELY,
       body: beginCell()
         .storeUint(0x2d69cd97, 32)
+        .storeUint(0, 64)
         .storeRef(keyBlock)
         .endCell(),
     });
