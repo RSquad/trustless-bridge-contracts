@@ -23,7 +23,7 @@ global int  g::root_hash;
   set_data(data.end_cell());
 }
 
-() check_block_signature(int root_hash, cell signatures_c) impure {
+() check_block_signature(int root_hash, cell signatures_c, int file_hash) impure {
   slice validators_list_slice = g::validators.begin_parse();
   ~dump(validators_list_slice.slice_bits()); ;; 169
   int val_type = validators_list_slice~load_uint(8); ;; 161
@@ -70,8 +70,16 @@ global int  g::root_hash;
     ;; ~dump(node_id_short);
     ;; ~dump(v_node_id);
     if (node_id_short == v_node_id) {
-      int is_signed = check_signature(root_hash, sig, v_pub);
-      ;; ~dump(root_hash);
+      ;; bytes4(0x706e0bc5), test_root_hash, file_hash
+      slice test_me = begin_cell()
+      .store_uint(0x706e0bc5, 32)
+      .store_uint(root_hash, 256)
+      .store_uint(file_hash, 256)
+      .end_cell().begin_parse();
+      int is_signed = check_data_signature(test_me, sig, v_pub);
+      ;; int is_signed = check_signature(root_hash, sig, v_pub);
+      ~dump(file_hash);
+      ~dump(root_hash);
       ~dump(is_signed);
       ok? = 0;
     } else {
@@ -111,12 +119,13 @@ global int  g::root_hash;
   if ( op == op::new_key_block ) {
     cell block = in_msg_body~load_ref();
     cell signatures_c = in_msg_body~load_ref();
+    int file_hash = in_msg_body~load_uint(256);
     int root_hash = cell_hash(block);
 
     ~dump(root_hash);
     load_globals();
     ;; START SIG CHECK
-    check_block_signature(root_hash, signatures_c);
+    check_block_signature(root_hash, signatures_c, file_hash);
 
     
     ;; END SIG CHECK

@@ -58,7 +58,7 @@ describe("LiteClient", () => {
 
   it("should read block", async () => {
     const secondKeyblock = readByFileHash(
-      "1345DCE991E8B6D99A75A63F1A4A962215A3196B90CD5D28A14C14EB594CDB77",
+      "A1DBB3C51BC30E32DB706C1B20FA2AB43A3E6639E3314DFB5C09360D7AF75C1E",
     );
     const epoch = extractEpoch(secondKeyblock);
     const signatures = Dictionary.empty<number, Cell>(
@@ -81,6 +81,7 @@ describe("LiteClient", () => {
       toNano("10.05"),
       secondKeyblock,
       beginCell().storeDict(signatures).endCell(),
+      Buffer.from("A1DBB3C51BC30E32DB706C1B20FA2AB43A3E6639E3314DFB5C09360D7AF75C1E", 'hex')
     );
 
     // console.log(result.transactions.map((x) => x.vmLogs));

@@ -51,6 +51,7 @@ export class LiteClient implements Contract {
     value: bigint,
     block: Cell,
     signatures: Cell,
+    fileHash: Buffer,
   ) {
     await provider.internal(via, {
       value,
@@ -58,6 +59,7 @@ export class LiteClient implements Contract {
       body: beginCell()
         .storeUint(0x2d69cd97, 32)
         .storeUint(0, 64)
+        .storeBuffer(fileHash, 32)
         .storeRef(block)
         .storeRef(signatures)
         .endCell(),
