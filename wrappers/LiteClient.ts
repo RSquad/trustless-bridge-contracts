@@ -9,10 +9,16 @@ import {
   SendMode,
 } from "@ton/core";
 
-export type LiteClientConfig = {};
+export type LiteClientConfig = {
+  rootHash: Buffer;
+  validators: Cell;
+};
 
 export function liteClientConfigToCell(config: LiteClientConfig): Cell {
-  return beginCell().endCell();
+  return beginCell()
+    .storeBuffer(config.rootHash, 32)
+    .storeRef(config.validators)
+    .endCell();
 }
 
 export class LiteClient implements Contract {
@@ -43,7 +49,8 @@ export class LiteClient implements Contract {
     provider: ContractProvider,
     via: Sender,
     value: bigint,
-    keyBlock: Cell,
+    block: Cell,
+    signatures: Cell,
   ) {
     await provider.internal(via, {
       value,
@@ -51,7 +58,8 @@ export class LiteClient implements Contract {
       body: beginCell()
         .storeUint(0x2d69cd97, 32)
         .storeUint(0, 64)
-        .storeRef(keyBlock)
+        .storeRef(block)
+        .storeRef(signatures)
         .endCell(),
     });
   }
