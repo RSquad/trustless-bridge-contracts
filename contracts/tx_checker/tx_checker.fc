@@ -1,0 +1,47 @@
+#include "../libs/stdlib.fc";
+#include "../libs/errors.lib.fc";
+#include "../libs/merkle_proof.lib.fc";
+#include "opcodes.fc";
+
+() load_globals() impure {
+  slice ds = get_data().begin_parse();
+}
+
+() recv_internal(
+  int my_balance,
+  int msg_value,
+  cell in_msg_full, 
+  slice in_msg_body
+) impure {
+  if ( in_msg_body.slice_empty?() ) { 
+    ;; accept simple transfer
+    return ();
+  }
+  slice cs = in_msg_full.begin_parse();
+  int flags = cs~load_uint(4);
+  if ( flags & 1 ) { 
+    ;; no handler for bounced message
+    return ();
+  }
+
+  slice sender_address = cs~load_msg_addr();
+  int op = in_msg_body~load_uint(32);
+
+  load_globals();
+
+  if (op::check_transaction == op) {
+    ;; check_transaction#91d555f7 
+    ;;   transaction:^Cell 
+    ;;   proof:^Cell 
+    ;;   current_block:^Cell 
+    ;; = InternalMsgBody;
+    cell tx = in_msg_body~load_ref();
+    cell proof = in_msg_body~load_ref();
+    cell block = in_msg_body~load_ref();
+    merkle_proof::find_tx(proof);
+    return ();
+  } 
+
+  throw(err::unknown_operation);
+}
+

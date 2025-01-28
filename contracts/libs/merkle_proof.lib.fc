@@ -1,0 +1,3 @@
+cell merkle_proof::find_tx(cell merkle_proof) impure inline {
+  return null();
+}

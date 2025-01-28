@@ -1,0 +1,1 @@
+const int err::unknown_operation = 0xffff;

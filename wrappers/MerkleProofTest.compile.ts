@@ -2,5 +2,5 @@ import { CompilerConfig } from '@ton/blueprint';
 
 export const compile: CompilerConfig = {
     lang: 'func',
-    targets: ['contracts/tx_checker/tx_checker.fc'],
+    targets: ['contracts/libs/merkle_proof.test.fc'],
 };
