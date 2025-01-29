@@ -1,0 +1,2 @@
+const int err::unknown_operation = 0xffff;
+const int err::wrong_validator_magic = 1;

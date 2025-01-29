@@ -1,97 +1,48 @@
 #include "imports/stdlib.fc";
+#include "lite_client/opcodes.fc";
+#include "lite_client/errors.fc";
+#include "lite_client/storage.fc";
+#include "imports/ton_msg.lib.fc";
 
-const int err::unknown_operation = 0xffff;
 
-const int op::new_key_block = "op::new_key_block"c;
-const int op::check_block = "op::check_block"c;
-const int op::check_shard = "op::check_shard"c;
-
-global cell  g::validators;
-global int  g::root_hash;
-
-() load_globals() impure {
-  var ds = get_data().begin_parse();
-  g::root_hash = ds~load_uint(256);
-  g::validators = ds~load_ref();
-  ds.end_parse();
-}
-
-() store_globals() impure {
-  builder data = begin_cell();
-  data.store_uint(g::root_hash, 256);
-  data.store_ref(g::validators);
-  set_data(data.end_cell());
-}
-
-() check_block_signature(int root_hash, cell signatures_c, int file_hash) impure {
-  slice validators_list_slice = g::validators.begin_parse();
-  ~dump(validators_list_slice.slice_bits()); ;; 169
-  int val_type = validators_list_slice~load_uint(8); ;; 161
-  ~dump(val_type);
-  int utime_since = validators_list_slice~load_uint(32); ;; 129
-  ~dump(utime_since);
-  int utime_until = validators_list_slice~load_uint(32); ;; 97
-  ~dump(utime_until);
-  int total = validators_list_slice~load_uint(16); ;; 81
-  ~dump(total);
-  int main = validators_list_slice~load_uint(16); ;; 69
-  ~dump(main);
-  int weight = validators_list_slice~load_uint(64); ;; 5
-  ~dump(weight);
-  
-  cell validators = validators_list_slice~load_dict();
+(int) check_block_signature(int root_hash, cell signatures_c, int file_hash) impure {
+  (cell validators, int total_weight) = load_validators();
   slice signatures_s = signatures_c.begin_parse();
   cell signatures = signatures_s~load_dict();
 
+  int signed_weight = 0;
   int i = 0;
   (slice validator, int ok_val?) = validators.udict_get?(16, i);
   while (ok_val?) {
-
+      (int v_pub, int v_weight, int v_node_id) = parse_validator(validator);
   
-  int v_header = validator~load_uint(8);
-  slice v_str_node_id = validator.preload_bits(32 + 256);
-  int v_magic = validator~load_uint(32);
-  throw_unless(v_magic == 0x8e81278a, err::unknown_operation);
-  int v_pub = validator~load_uint(256);
-  int v_weight = validator~load_uint(64);
-  slice th = begin_cell()
-    .store_uint(0xc6b41348, 32)
-    .store_uint(v_pub, 256)
-  .end_cell().begin_parse();
-  int v_node_id = string_hash(th);
-
-  int j = 0;
-  (cell signature, int ok?) = signatures.udict_get_ref?(16, j);
-  while (ok?) {
-    slice sig_s = signature.begin_parse();
-    int node_id_short = sig_s~load_uint(256);
-    slice sig = sig_s~load_bits(512);
-    ;; ~strdump("cheeek");
-    ;; ~dump(node_id_short);
-    ;; ~dump(v_node_id);
-    if (node_id_short == v_node_id) {
-      ;; bytes4(0x706e0bc5), test_root_hash, file_hash
-      slice test_me = begin_cell()
+    int j = 0;
+      (cell signature, int ok?) = signatures.udict_get_ref?(16, j);
+    while (ok?) {
+      slice sig_s = signature.begin_parse();
+      int node_id_short = sig_s~load_uint(256);
+      slice sig = sig_s~load_bits(512);
+      if (node_id_short == v_node_id) {
+        slice sig_message = begin_cell()
       .store_uint(0x706e0bc5, 32)
       .store_uint(root_hash, 256)
       .store_uint(file_hash, 256)
       .end_cell().begin_parse();
-      int is_signed = check_data_signature(test_me, sig, v_pub);
-      ;; int is_signed = check_signature(root_hash, sig, v_pub);
-      ~dump(file_hash);
-      ~dump(root_hash);
-      ~dump(is_signed);
-      ok? = 0;
-    } else {
-      j = j + 1;
-      (signature, ok?) = signatures.udict_get_ref?(16, j);
+        int is_signed = check_data_signature(sig_message, sig, v_pub);
+        if (is_signed) {
+          signed_weight = signed_weight + v_weight;
+        }
+        ok? = 0;
+      } else {
+        j = j + 1;
+          (signature, ok?) = signatures.udict_get_ref?(16, j);
+      }
     }
+    i = i + 1;
+      (validator, ok_val?) = validators.udict_get?(16, i);
   }
-  i = i + 1;
-  (validator, ok_val?) = validators.udict_get?(16, i);
-}
 
-  return ();
+  return signed_weight * 3 >= 2 * total_weight;
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
@@ -117,25 +68,19 @@ global int  g::root_hash;
   ;; - send to sender ok#ff8ff4e1 query_id:uint64 block_hash:uint256 = InternalMsgBody;
   ;; if something is wrong, reject
   if ( op == op::new_key_block ) {
+    ;; (slice cs, int special) = block.begin_parse_special();
+    ;; cell test = cs~load_ref();
     cell block = in_msg_body~load_ref();
     cell signatures_c = in_msg_body~load_ref();
     int file_hash = in_msg_body~load_uint(256);
     int root_hash = cell_hash(block);
 
-    ~dump(root_hash);
     load_globals();
-    ;; START SIG CHECK
-    check_block_signature(root_hash, signatures_c, file_hash);
+    
+    
 
-    
-    ;; END SIG CHECK
-    
-    ;; (slice cs, int special) = block.begin_parse_special();
-    ;; cell test = cs~load_ref();
-    
 
     slice cs = block.begin_parse();
-    
     cell block_info = cs~load_ref();
     slice block_info_s = block_info.begin_parse();
     int block_type = block_info_s~load_uint(32);
@@ -169,41 +114,32 @@ global int  g::root_hash;
     cell config = custom_s~load_dict();
     (cell config_34, int flag?) = config.udict_get_ref?(32, 34);
     throw_unless(flag?, err::unknown_operation);
-    g::validators = config_34;
-    g::root_hash = root_hash;
-    store_globals();
-    ;; slice config_34_s = config_34.begin_parse();
 
-
-    ;; int hash = cell_hash(block);
-    ;; ~strdump("success");
-    ;; ~dump(hash);
-    ;; ~dump(block);
-
-    ;; int is_keyblock = extra_s~load_uint(1);
-    ;; ;; throw_unless(is_keyblock, "is not keyblock");
-
-    
-    ;; ;; TODO: parse config 34; store validators
-    ;; ;; shard_hashes:ShardHashes
-    ;; extra_s~load_ref();
-    ;; ;; shard_fees:ShardFees
-    ;; extra_s~load_ref();
-    ;; ;; prev_blk_signatures
-    ;; cell config_cell = extra_s~load_ref();
-    ;; ;; if (~extra_s.slice_refs_empty?()) {
-    ;; ;;   ;; config:key_block?ConfigParams
-    ;; ;;   config_cell = extra_s~load_ref();
-    ;; ;; }
+    int is_block_signed = check_block_signature(root_hash, signatures_c, file_hash);
+    if (is_block_signed) {
+      g::validators = config_34;
+      g::root_hash = root_hash;
+      store_globals();
     
 
-    
+      int query_id = 0;
+      cell msg = build_message(
+        sender_address,
+        0,
+        false,
+        null(),
+        begin_cell()
+          .store_uint(op::new_key_block::success, 32)
+          .store_uint(query_id, 64)
+          .store_uint(root_hash, 256)
+        .end_cell()
+      ).end_cell();
+      send_raw_message(msg, send_mode::carry_remaining_value);
+      return ();
+    }    
     return ();
   }
   if ( op == op::check_block ) {
-    return ();
-  }
-  if ( op == op::check_shard ) {
     return ();
   }
 

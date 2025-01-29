@@ -1,0 +1,47 @@
+#include "errors.fc";
+
+global cell  g::validators;
+global int  g::root_hash;
+
+() load_globals() impure {
+  var ds = get_data().begin_parse();
+  g::root_hash = ds~load_uint(256);
+  g::validators = ds~load_ref();
+  ds.end_parse();
+}
+
+() store_globals() impure {
+  builder data = begin_cell();
+  data.store_uint(g::root_hash, 256);
+  data.store_ref(g::validators);
+  set_data(data.end_cell());
+}
+
+(cell, int) load_validators() impure {
+    slice validators_list_slice = g::validators.begin_parse();
+    int val_type = validators_list_slice~load_uint(8);
+    int utime_since = validators_list_slice~load_uint(32);
+    int utime_until = validators_list_slice~load_uint(32);
+    int total = validators_list_slice~load_uint(16);
+    int main = validators_list_slice~load_uint(16);
+    int weight = validators_list_slice~load_uint(64);
+    cell validators = validators_list_slice~load_dict();
+
+    return (validators, weight);
+}
+
+(int, int, int) parse_validator(slice validator) impure {
+    int v_header = validator~load_uint(8);
+    slice v_str_node_id = validator.preload_bits(32 + 256);
+    int v_magic = validator~load_uint(32);
+    throw_unless(v_magic == 0x8e81278a, err::wrong_validator_magic);
+    int v_pub = validator~load_uint(256);
+    int v_weight = validator~load_uint(64);
+    slice th = begin_cell()
+        .store_uint(0xc6b41348, 32)
+        .store_uint(v_pub, 256)
+    .end_cell().begin_parse();
+    int v_node_id = string_hash(th);
+
+    return (v_pub, v_weight, v_node_id);
+}

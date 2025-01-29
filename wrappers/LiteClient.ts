@@ -14,6 +14,11 @@ export type LiteClientConfig = {
   validators: Cell;
 };
 
+export const OpCodes = {
+  OP_NEW_KEYBLOCK: 0x2d69cd97,
+  OP_NEW_KEYBLOCK_ANSWER: 0xff8ff4e1,
+}
+
 export function liteClientConfigToCell(config: LiteClientConfig): Cell {
   return beginCell()
     .storeBuffer(config.rootHash, 32)
@@ -57,7 +62,7 @@ export class LiteClient implements Contract {
       value,
       sendMode: SendMode.PAY_GAS_SEPARATELY,
       body: beginCell()
-        .storeUint(0x2d69cd97, 32)
+        .storeUint(OpCodes.OP_NEW_KEYBLOCK, 32)
         .storeUint(0, 64)
         .storeBuffer(fileHash, 32)
         .storeRef(block)

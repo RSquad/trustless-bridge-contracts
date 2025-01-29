@@ -104,7 +104,7 @@ export const extractEpoch = (cell: Cell) => {
     console.log({
         valsType, utimeSince, utimeUntil, total, main, weight
     })
-    // console.log(validatorsList.keys());
+
     console.log(validatorsList.values().map(v =>  {
       let pk = new Uint8Array(36);
     pk.set([0xc6, 0xb4, 0x13, 0x48], 0);
@@ -113,23 +113,5 @@ export const extractEpoch = (cell: Cell) => {
     return sha256_sync(Buffer.from(pk)).toString('hex');
     }));
   }
-//   console.log(validators);
-//   console.log(configSlice);
-//   const configAddr = configSlice.loadBuffer(32);
-//   const configParams = configSlice.loadMaybeRef();
-//   if (configParams) {
-//     const hell = configParams.beginParse();
-//     const dict = hell.loadDict(Dictionary.Keys.BigInt(32), Dictionary.Values.Cell());
-//     console.log(dict.keys());
-//   }
-  console.log("HASH:", cell.hash(0).toString('hex'))
   return {rootHash: cell.hash(0), validators: validators};
 };
-
-// function sha256(bytes) {
-//   if (typeof window === 'undefined') {
-//       return nodeCrypto.createHash('sha256').update(bytes).digest();
-//   } else {
-//       return crypto.subtle.digest("SHA-256", bytes);
-//   }
-// }
