@@ -293,6 +293,8 @@ int abs(int x) asm "ABS";
 ;;; or an exotic cell (see [TVM.pdf](https://ton-blockchain.github.io/docs/tvm.pdf), 3.1.2)
 ;;; which is automatically loaded to yield an ordinary cell `c'`, converted into a `slice` afterwards.
 slice begin_parse(cell c) asm "CTOS";
+(slice, int) begin_parse_special(cell c) asm "XCTOS";
+;; (slice, int) begin_parse_special(cell c) asm "x{D739} s,";
 
 ;;; Checks if [s] is empty. If not, throws an exception.
 () end_parse(slice s) impure asm "ENDS";
