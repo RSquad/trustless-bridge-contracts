@@ -1,0 +1,35 @@
+#include "stdlib.fc";
+#include "tvm.lib.fc";
+#include "errors.lib.fc";
+
+cell merkle_proof::find_tx(cell merkle_proof) impure inline {
+  slice block = merkle_proof.begin_parse();
+  int tag = block~load_uint(32);
+  throw_unless(err::invalid_block_tag, tag == 0x11ef55aa);
+  ;; skip info, value_flow, and state_update
+  block~load_ref();
+  block~load_ref();
+  block~load_ref();
+  ;; load ref with extra
+  slice extra = block~load_ref_slice();
+  ;; skip in_msg_descr, out_msg_descr
+  extra~load_ref();
+  extra~load_ref();
+  ;; load account_blocks
+  slice s = extra~load_ref_slice();
+  cell account_blocks = s~load_dict();
+  ;; assume there is only one account - all others are pruned
+  (int addr, slice acc_block, int ok?) = account_blocks.idict_get_max?(256);
+  throw_unless(err::no_accounts, ok?);
+  ;; skip CurrencyCollection
+  acc_block~load_coins();
+  acc_block~load_dict();
+  throw_unless(err::invalid_account_block, acc_block~load_uint(4) == 5);
+  cell transactions = begin_cell().store_slice(acc_block).end_cell();
+  (_, slice value, int ok?) = transactions.udict_get_max?(64);
+  throw_unless(err::no_txs, ok?);
+  value~load_coins();
+  value~load_dict();
+  cell tx = value~load_ref();
+  return tx;
+}

@@ -1,0 +1,21 @@
+#include "stdlib.fc";
+#include "errors.lib.fc";
+#include "merkle_proof.lib.fc";
+
+() recv_internal(
+  int my_balance,
+  int msg_value,
+  cell in_msg_full, 
+  slice in_msg_body
+) impure {
+  if ( in_msg_body.slice_empty?() ) { 
+    ;; accept simple transfer
+    return ();
+  }
+
+  throw(err::unknown_operation);
+}
+
+cell get_merkle_proof_find_tx(cell proof) method_id {
+  return merkle_proof::find_tx(proof);
+}
