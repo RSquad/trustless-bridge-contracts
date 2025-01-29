@@ -1,0 +1,1 @@
+(slice, (slice)) ~load_ref_slice(slice s) asm "LDREFRTOS";

@@ -1,1 +1,4 @@
 const int err::unknown_operation = 0xffff;
+const int err::invalid_block_tag = 101;
+const int err::no_accounts = 102;
+const int err::no_txs = 103;

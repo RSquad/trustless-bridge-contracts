@@ -16,6 +16,6 @@
   throw(err::unknown_operation);
 }
 
-cell get_merkle_proof_check_tx(cell proof) method_id {
+cell get_merkle_proof_find_tx(cell proof) method_id {
   return merkle_proof::find_tx(proof);
 }
