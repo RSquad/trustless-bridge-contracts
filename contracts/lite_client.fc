@@ -139,6 +139,11 @@
     }    
     return ();
   }
+
+  ;; check_block#8eaa9d76 query_id:uint64 block:^Cell signatures:^Cell = InternalMsgBody;
+  ;; - checks that block in current epoch
+  ;; - correct sign
+  ;; - send to sender correct#ce02b807 query_id:uint64 block_hash:uint256 = InternalMsgBody;
   if ( op == op::check_block ) {
     return ();
   }
@@ -146,13 +151,16 @@
   throw(err::unknown_operation);
 }
 
-;; LiteClient
+cell get_config_34() method_id {
+  load_globals();
+  return g::validators;
+}
 
-
-;; check_block#8eaa9d76 query_id:uint64 block:^Cell signatures:^Cell = InternalMsgBody;
-;; - checks that block in current epoch
-;; - correct sign
-;; - send to sender correct#ce02b807 query_id:uint64 block_hash:uint256 = InternalMsgBody;
+cell get_validators() method_id {
+  load_globals();
+  (cell validators, _) = load_validators();
+  return validators;
+}
 
 ;; also todo: script to get data from liteservers and generate new_key_block msg
 

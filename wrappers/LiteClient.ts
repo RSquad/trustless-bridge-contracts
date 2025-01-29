@@ -5,9 +5,11 @@ import {
   Contract,
   contractAddress,
   ContractProvider,
+  Dictionary,
   Sender,
   SendMode,
 } from "@ton/core";
+import { ValidatorDescriptionDictValue } from "../tests/utils";
 
 export type LiteClientConfig = {
   rootHash: Buffer;
@@ -69,5 +71,40 @@ export class LiteClient implements Contract {
         .storeRef(signatures)
         .endCell(),
     });
+  }
+
+
+  async getConfig34(provider: ContractProvider): Promise<{
+    config34: Cell;
+    
+  }> {
+    const result = await provider.get("get_config_34", []);
+    const cell = result.stack.readCellOpt();
+    if (!cell) {
+      throw Error("no state");
+    }
+    return {
+      config34: cell
+    };
+  }
+
+  async getValidators(provider: ContractProvider): Promise<{
+    validators: Dictionary<number, {
+      publicKey: Buffer;
+      weight: bigint;
+      adnlAddress: Buffer | null;
+  }>;
+  }> {
+    const result = await provider.get("get_validators", []);
+    const cell = result.stack.readCellOpt();
+    if (!cell) {
+      throw Error("no state");
+    }
+  
+    const slice = cell.beginParse();
+    const validators = slice.loadDictDirect(Dictionary.Keys.Uint(16), ValidatorDescriptionDictValue)
+    return {
+      validators
+    };
   }
 }

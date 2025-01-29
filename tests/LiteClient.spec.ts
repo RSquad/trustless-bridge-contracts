@@ -87,6 +87,7 @@ describe("LiteClient", () => {
     );
 
     // console.log(result.transactions.map((x) => x.vmLogs));
+    
 
     expect(result.transactions).toHaveTransaction({
       from: deployer.address,

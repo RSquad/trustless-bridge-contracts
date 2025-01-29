@@ -13,7 +13,7 @@ function readPublicKey(slice: Slice) {
     return slice.loadBuffer(32);
 }
 
-const ValidatorDescriptionDictValue: DictionaryValue<{publicKey: Buffer, weight: bigint, adnlAddress: Buffer|null}> = {
+export const ValidatorDescriptionDictValue: DictionaryValue<{publicKey: Buffer, weight: bigint, adnlAddress: Buffer|null}> = {
     serialize(src: any, builder: Builder): void {
         throw Error("not implemented")
     },
