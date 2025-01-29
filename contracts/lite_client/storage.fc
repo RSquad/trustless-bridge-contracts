@@ -1,6 +1,6 @@
 #include "errors.fc";
 
-global cell  g::validators;
+global cell g::validators;
 global int  g::root_hash;
 
 () load_globals() impure {
@@ -11,9 +11,9 @@ global int  g::root_hash;
 }
 
 () store_globals() impure {
-  builder data = begin_cell();
-  data.store_uint(g::root_hash, 256);
-  data.store_ref(g::validators);
+  builder data = begin_cell()
+  .store_uint(g::root_hash, 256)
+  .store_ref(g::validators);
   set_data(data.end_cell());
 }
 

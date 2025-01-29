@@ -85,6 +85,7 @@ describe("LiteClient", () => {
         "hex",
       ),
     );
+    await liteClient.getValidators();
 
     // console.log(result.transactions.map((x) => x.vmLogs));
     

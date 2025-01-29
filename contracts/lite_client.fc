@@ -76,9 +76,6 @@
     int root_hash = cell_hash(block);
 
     load_globals();
-    
-    
-
 
     slice cs = block.begin_parse();
     cell block_info = cs~load_ref();
