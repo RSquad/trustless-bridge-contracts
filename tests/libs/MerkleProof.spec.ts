@@ -29,7 +29,7 @@ describe('MerkleProof', () => {
     it('find tx', async () => {
         // block (0,2000000000000000,29361913)
         const blockHex = fs.readFileSync("./tests/libs/EFFC17EF8FE824E6A039944F3BFC9CEC4A5D9F74D8D93122243EDBD7BF5D4123.boc", "hex");
-        const expectedHash = "A43DEBA96E0815151645411FEF0FE7E54FF35500B02310A19E7A89AFDFA58194";
+        const expectedHash = "A43DEBA96E0815151645411FEF0FE7E54FF35500B02310A19E7A89AFDFA58194".toLowerCase();
         const block = Cell.fromBoc(Buffer.from(blockHex, "hex"))[0];
         const txCell = await merkleProof.getMerkleProofFindTx(block);
         expect(txCell).toBeDefined();
