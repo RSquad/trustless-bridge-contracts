@@ -1,3 +1,5 @@
+#include "../libs/tvm.lib.fc";
+
 () check_is_masterchain_block(cell block_info) impure inline {
     slice block_info_s = block_info.begin_parse();
     int block_type = block_info_s~load_uint(32);
@@ -7,7 +9,7 @@
     throw_unless(not_master,  err::is_not_masterchain_block);
 }
 
-(slice) build_signature_message(int root_hash, int file_hash) impure {
+(slice) build_signing_message(int root_hash, int file_hash) inline {
   return begin_cell()
   .store_uint(0x706e0bc5, 32)
   .store_uint(root_hash, 256)
@@ -16,9 +18,8 @@
   .begin_parse();
 }
 
-(int) check_block_signature(slice sig_message, cell signatures_c) impure {
-  slice signatures_s = signatures_c.begin_parse();
-  cell signatures = signatures_s~load_dict();
+(int) check_block_signatures(slice signing_message, slice signatures_slice) inline {
+  cell signatures = signatures_slice~load_dict();
 
   int signed_weight = 0;
 
@@ -31,7 +32,7 @@
     (slice validator_s, int validator_found?) = g::validators.udict_get?(256, pubkey);
 
     throw_unless(validator_found?, err::wrong_validators_epoch);
-    if (check_data_signature(sig_message, signature, pubkey)) {
+    if (check_data_signature(signing_message, signature, pubkey)) {
       int validator_weight = validator_s~load_uint(64);
       signed_weight = signed_weight + validator_weight;
     }
@@ -45,20 +46,18 @@
   return signed_weight * 3 >= 2 * g::total_weight;
 }
 
-(slice) load_block_custom(cell block) impure {
+(slice) load_block_custom(cell block) inline {
     slice cs = block.begin_parse();
     cs~load_ref();
     cs~load_ref();
     cs~load_ref();
-    cell extra = cs~load_ref();
-    slice extra_s = extra.begin_parse();
+    slice extra_s = cs~load_ref_slice();
     int tag = extra_s~load_uint(32);
     throw_unless(tag == 0x4a33f6fd, err::wrong_block_extra);
     extra_s~load_ref();
     extra_s~load_ref();
     extra_s~load_ref();
-    cell custom = extra_s~load_ref();
-    slice custom_s = custom.begin_parse();
+    slice custom_s = extra_s~load_ref_slice();
     int custom_magic = custom_s~load_uint(16);
     throw_unless(custom_magic == 0xcca5, err::unknown_operation);
     int is_keyblock = custom_s~load_uint(1);
@@ -66,7 +65,7 @@
     return custom_s;
 }
 
-(cell, int) load_validators_list(slice custom_s) impure {
+(cell, int) load_validators_list(slice custom_s) inline {
     custom_s~load_ref();
     custom_s~load_ref();
     custom_s~load_ref();

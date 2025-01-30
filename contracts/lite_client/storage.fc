@@ -1,4 +1,4 @@
-#include "errors.fc";
+#include "../libs/errors.lib.fc";
 
 global cell g::validators;
 global int g::total_weight;

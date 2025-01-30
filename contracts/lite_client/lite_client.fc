@@ -1,8 +1,9 @@
 #include "../imports/stdlib.fc";
-#include "opcodes.fc";
-#include "errors.fc";
-#include "storage.fc";
 #include "../imports/ton_msg.lib.fc";
+#include "../libs/errors.lib.fc";
+#include "../libs/tvm.lib.fc";
+#include "opcodes.fc";
+#include "storage.fc";
 #include "utils.fc";
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
@@ -23,16 +24,16 @@
     ;; (slice cs, int special) = block.begin_parse_special();
     ;; cell test = cs~load_ref();
     cell block = in_msg_body~load_ref();
-    cell signatures_c = in_msg_body~load_ref();
+    slice signatures_slice = in_msg_body~load_ref_slice();
     int file_hash = in_msg_body~load_uint(256);
     int root_hash = cell_hash(block);
 
     ;; also checks if the block is keyblock
     slice custom_s = load_block_custom(block);
 
-    slice signature_message = build_signature_message(root_hash, file_hash);
+    slice signing_message = build_signing_message(root_hash, file_hash);
     load_globals();
-    int is_block_signed = check_block_signature(signature_message, signatures_c);
+    int is_block_signed = check_block_signatures(signing_message, signatures_slice);
     throw_unless(is_block_signed, err::unsigned_block);
 
     (cell validators_list, int main) = load_validators_list(custom_s);
@@ -56,17 +57,17 @@
 
   if ( op == op::check_block ) {
     cell block = in_msg_body~load_ref();
-    cell signatures_c = in_msg_body~load_ref();
+    slice cs = block.begin_parse();
+    slice signatures_slice = in_msg_body~load_ref_slice();
     int file_hash = in_msg_body~load_uint(256);
     int root_hash = cell_hash(block);
 
-    slice cs = block.begin_parse();
     check_is_masterchain_block(cs~load_ref());
-    slice signature_message = build_signature_message(root_hash, file_hash);
+    slice signing_message = build_signing_message(root_hash, file_hash);
     load_globals();
 
     ;; if sign is correct, block in current epoch
-    int is_block_signed = check_block_signature(signature_message, signatures_c);
+    int is_block_signed = check_block_signatures(signing_message, signatures_slice);
     throw_unless(is_block_signed, err::unsigned_block);
     
     cell msg = build_message(
