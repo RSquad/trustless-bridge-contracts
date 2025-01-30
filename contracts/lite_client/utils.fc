@@ -65,3 +65,21 @@
     throw_unless(is_keyblock, err::is_not_keyblock);
     return custom_s;
 }
+
+(cell, int) load_validators_list(slice custom_s) impure {
+    custom_s~load_ref();
+    custom_s~load_ref();
+    custom_s~load_ref();
+    cell config = custom_s~load_dict();
+    (cell config_34, int flag?) = config.udict_get_ref?(32, 34);
+    throw_unless(flag?, err::is_not_keyblock);
+    slice config_34_s = config_34.begin_parse();
+    ;; valsType, utimeSince, utimeUntil
+    config_34_s~skip_bits(72);
+    int total = config_34_s~load_uint(16);
+    int main = config_34_s~load_uint(16);
+    throw_if(err::wrong_validators_config, total < main);
+    throw_if(err::wrong_validators_config, main < 1);
+    config_34_s~skip_bits(64); ;; total_weight
+    return (config_34_s~load_dict(), main);
+}

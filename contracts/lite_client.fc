@@ -19,14 +19,6 @@
   int op = in_msg_body~load_uint(32);
   int query_id = in_msg_body~load_uint(64);
 
-  ;; new_key_block#11a78ffe query_id:uint64 block:^Cell signatures:^Cell = InternalMsgBody;
-  ;; - checks that block in current epoch
-  ;; - checks that block is keyblock
-  ;; - checks that signatures are valid
-  ;; - loads new epoch parameters (validators)
-  ;; - update current epoch
-  ;; - send to sender ok#ff8ff4e1 query_id:uint64 block_hash:uint256 = InternalMsgBody;
-  ;; if something is wrong, reject
   if ( op == op::new_key_block ) {
     ;; (slice cs, int special) = block.begin_parse_special();
     ;; cell test = cs~load_ref();
@@ -35,64 +27,17 @@
     int file_hash = in_msg_body~load_uint(256);
     int root_hash = cell_hash(block);
 
+    ;; also checks if the block is keyblock
     slice custom_s = load_block_custom(block);
+
     slice signature_message = build_signature_message(root_hash, file_hash);
     load_globals();
     int is_block_signed = check_block_signature(signature_message, signatures_c);
     throw_unless(is_block_signed, err::unsigned_block);
-    custom_s~load_ref();
-    custom_s~load_ref();
-    custom_s~load_ref();
-    cell config = custom_s~load_dict();
-    (cell config_34, int flag?) = config.udict_get_ref?(32, 34);
-    throw_unless(flag?, err::is_not_keyblock);
-    slice config_34_s = config_34.begin_parse();
-    int valsType = config_34_s~load_uint(8);
-    int utimeSince = config_34_s~load_uint(32);
-    int utimeUntil = config_34_s~load_uint(32);
-    int total = config_34_s~load_uint(16);
-    int main = config_34_s~load_uint(16);
-    throw_if(err::wrong_validators_config, total < main);
-    throw_if(err::wrong_validators_config, main < 1);
-    int total_weight = config_34_s~load_uint(64);
-    cell validators_dict = config_34_s~load_dict();
-    int validators_hash = cell_hash(validators_dict);
-    
-    if ((validators_hash == g::epoch_hash)) {
-      ( int index,
-        slice validator,
-        int validators::not_end?
-      ) = validators_dict.udict_get_nexteq?(16, 0);
-      
-      while (index < main) {
-        int header =  validator~load_uint(8);
-        if (header == 0x53) {
-          int p_magic = validator~load_uint(32);
-          throw_unless(p_magic == 0x8e81278a, err::wrong_validators_config);
-          int validator_pubkey = validator~load_uint(256);
-          int validator_weight = validator~load_uint(64);
-        }
-        elseif (header == 0x73) {
-          int p_magic = validator~load_uint(32);
-          throw_unless(p_magic == 0x8e81278a, err::wrong_validators_config);
-          int validator_pubkey = validator~load_uint(256);
-          int validator_weight = validator~load_uint(64);
-        } 
-        else {
-          throw_unless(false, err::wrong_validators_config);
-        }
 
-         (index,
-          validator,
-          validators::not_end?
-        ) = validators_dict.udict_get_next?(16, index);
-      }
+    (cell validators_list, int main) = load_validators_list(custom_s);
+    update_validators_dict(validators_list, main);
   
-      g::epoch_hash = validators_hash;
-      g::total_weight = total_weight;
-      store_globals();
-    }
-
     cell msg = build_message(
       sender_address,
       0,
@@ -145,26 +90,3 @@ cell get_validators() method_id {
   load_globals();
   return g::validators;
 }
-
-;; also todo: script to get data from liteservers and generate new_key_block msg
-
-;; Transaction-checker
-;; check proofs to confirm that a given transaction was committed in some masterchain block of the current epoch.
-;; check_transaction#91d555f7 transaction:^Cell proof:^Cell current_block:^Cell = InternalMsgBody;
-;; - respond transaction_checked#756adff1 transaction:^Cell = InternalMsgBody;
-;; the format of proof and current_block are at participant discretion (current_block should contain proof for itself), 
-;; transaction can be a pruned branch cell. Transaction-checker may also interact with Lite-client to check the validity of a given block.
-
-;; also todo: Besides smart-contracts, 
-;; solution should contain a script that gets data from lite-server and builds check_transaction message for any given transaction in Masterchain.
-
-;; Solution
-;; Solution should contain
-;; 1. Code of Lite-client smart-contract and script for generation messages for that contract with build instructions.
-;; 2. Code of Transaction-checker smart-contract and script for generation messages for that contract with build instructions.
-;; 3. Addresses of smart-contracts deployed in Testnet and Fastnet respectively, with the tx_hash of transactions that demonstrate both successful and unsuccessful checks of blocks and transactions.
-
-;; Scoring
-;; 1. Correctness: the solution should correctly determine the validity of blocks and transactions.
-;; 2. Gas usage
-;; 3. The quality of the source code of your implementation of the smart contract (i.e., its readability and extensibility) will affect your final score.

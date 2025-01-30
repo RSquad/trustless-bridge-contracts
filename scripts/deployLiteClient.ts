@@ -6,6 +6,7 @@ export async function run(provider: NetworkProvider) {
   const liteClient = provider.open(
     LiteClient.createFromConfig({
       totalWeight: 0n,
+      validatorsHash: Buffer.alloc(32),
       validators: Dictionary.empty(Dictionary.Keys.Buffer(32), Dictionary.Values.BigInt(64)),
     }, await compile("LiteClient")),
   );

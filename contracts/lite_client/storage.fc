@@ -48,3 +48,35 @@ global int g::epoch_hash;
 
     return (v_pub, v_weight, v_node_id);
 }
+
+() update_validators_dict(cell validators_dict, int main) impure {
+    int validators_hash = cell_hash(validators_dict);
+
+    if (~(validators_hash == g::epoch_hash)) {
+      g::validators = new_dict();
+      g::total_weight = 0;
+      g::epoch_hash = validators_hash;
+      ( int index,
+        slice validator,
+        int validators::not_end?
+      ) = validators_dict.udict_get_nexteq?(16, 0);
+      
+      while (index < main) {
+        int header =  validator~load_uint(8);
+        int p_magic = validator~load_uint(32);
+        throw_unless(p_magic == 0x8e81278a, err::wrong_validators_config);
+        int validator_pubkey = validator~load_uint(256);
+        g::total_weight = g::total_weight + validator.preload_uint(64);
+        slice validator_weight = validator~load_bits(64);
+        
+        g::validators~udict_set(256, validator_pubkey, validator_weight);
+
+         (index,
+          validator,
+          validators::not_end?
+        ) = validators_dict.udict_get_next?(16, index);
+      }
+      
+      store_globals();
+    }
+}
