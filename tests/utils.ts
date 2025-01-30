@@ -1,4 +1,4 @@
-import { Builder, Cell, Dictionary, DictionaryValue, Slice } from "@ton/core";
+import { beginCell, Builder, Cell, Dictionary, DictionaryValue, Slice } from "@ton/core";
 import { loadConfigParamById, parseValidatorSet } from "@ton/ton";
 import fs from "fs";
 import path from "path";
@@ -37,9 +37,9 @@ export const ValidatorDescriptionDictValue: DictionaryValue<{publicKey: Buffer, 
     }
 }
 
-export const readByFileHash = (fileHash: string) => {
+export const readByFileHash = (fileHash: string, dir = "keyblocks") => {
   const bufBoc = fs.readFileSync(
-    path.resolve(__dirname, `keyblocks/${fileHash.toUpperCase()}.boc`),
+    path.resolve(__dirname, `${dir}/${fileHash}.boc`),
   );
   return Cell.fromBoc(bufBoc)[0];
 };
@@ -82,7 +82,10 @@ export const extractEpoch = (cell: Cell) => {
   const configSlice = config.beginParse();
 
   const dict = configSlice.loadDictDirect(Dictionary.Keys.BigInt(32), Dictionary.Values.Cell());
-  const validators = dict.get(32n);
+  const validators = dict.get(34n);
+  const liteClientEpochDict = Dictionary.empty(Dictionary.Keys.Buffer(32), Dictionary.Values.BigInt(64));
+  let totalWeight = 0n;
+  let validatorsHash = Buffer.alloc(32);
   if (validators) {
     const valSlice = validators.beginParse();
     const valsType = valSlice.loadUint(8);
@@ -96,22 +99,32 @@ export const extractEpoch = (cell: Cell) => {
     if (main < 1) {
         throw Error("main < 1");
     }
-    const weight = valSlice.loadUintBig(64);
+    const totalWeight = valSlice.loadUintBig(64);
     // 64 + 16 + 16 + 32 + 32 + 8 = 192
     // console.log('weight', weight, total, main);
+    const validatosCell = valSlice.preloadRef();
+    validatorsHash = validatosCell.hash(3);
     const validatorsList = valSlice.loadDict(Dictionary.Keys.Uint(16), ValidatorDescriptionDictValue);
+    
 
     console.log({
-        valsType, utimeSince, utimeUntil, total, main, weight
+        valsType, utimeSince, utimeUntil, total, main, totalWeight
     })
 
-    console.log(validatorsList.values().map(v =>  {
-      let pk = new Uint8Array(36);
-    pk.set([0xc6, 0xb4, 0x13, 0x48], 0);
-    pk.set(v.publicKey, 4);
-    
-    return sha256_sync(Buffer.from(pk)).toString('hex');
+    // console.log("FULL LIST:");
+    // console.log(validatorsList.values());
+    const vals = validatorsList.values().filter((v, i) => i < main).map(v => ({
+      publicKey: v.publicKey,
+      weight: v.weight
     }));
+
+    console.log("MAIN LIST:");
+    console.log(vals);
+    
+    vals.forEach(v => {
+      liteClientEpochDict.set(Buffer.from(v.publicKey), v.weight);
+    })
+
   }
-  return {rootHash: cell.hash(0), validators: validators};
+  return {rootHash: cell.hash(0), validators: validators, shortValidators: liteClientEpochDict, totalWeight, validatorsHash};
 };

@@ -1,3 +1,4 @@
 const int op::new_key_block = "op::new_key_block"c;
 const int op::check_block = "op::check_block"c;
 const int op::new_key_block::success = 0xff8ff4e1;
+const int op::check_block::success = 0xce02b807;

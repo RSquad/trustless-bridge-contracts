@@ -1,2 +1,10 @@
 const int err::unknown_operation = 0xffff;
 const int err::wrong_validator_magic = 1;
+const int err::is_not_keyblock = 2;
+const int err::is_not_masterchain_block = 3;
+const int err::wrong_block_info = 4;
+const int err::wrong_block_extra = 5;
+const int err::wrong_block_custom = 6;
+const int err::unsigned_block = 7;
+const int err::wrong_validators_epoch = 8;
+const int err::wrong_validators_config = 9;

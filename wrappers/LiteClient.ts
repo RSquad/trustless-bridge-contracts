@@ -6,26 +6,32 @@ import {
   contractAddress,
   ContractProvider,
   Dictionary,
+  DictionaryKey,
+  DictionaryKeyTypes,
   Sender,
   SendMode,
 } from "@ton/core";
 import { ValidatorDescriptionDictValue } from "../tests/utils";
 
 export type LiteClientConfig = {
-  rootHash: Buffer;
-  validators: Cell;
+  validators: Dictionary<Buffer<ArrayBufferLike>, bigint>;
+  totalWeight: bigint;
+  validatorsHash: Buffer<ArrayBufferLike>;
 };
 
 export const OpCodes = {
   OP_NEW_KEYBLOCK: 0x2d69cd97,
   OP_NEW_KEYBLOCK_ANSWER: 0xff8ff4e1,
+  OP_CHECKBLOCK: 0x9af476bc,
+  OP_CHECKBLOCK_ANSWER: 0xce02b807,
 }
 
 export function liteClientConfigToCell(config: LiteClientConfig): Cell {
   return beginCell()
-    .storeBuffer(config.rootHash, 32)
-    .storeRef(config.validators)
-    .endCell();
+  .storeUint(config.totalWeight, 64)
+  .storeBuffer(config.validatorsHash, 32)
+  .storeDict(config.validators)
+  .endCell()
 }
 
 export class LiteClient implements Contract {
@@ -73,27 +79,30 @@ export class LiteClient implements Contract {
     });
   }
 
-
-  async getConfig34(provider: ContractProvider): Promise<{
-    config34: Cell;
-    
-  }> {
-    const result = await provider.get("get_config_34", []);
-    const cell = result.stack.readCellOpt();
-    if (!cell) {
-      throw Error("no state");
-    }
-    return {
-      config34: cell
-    };
+  async sendCheckBlock(
+    provider: ContractProvider,
+    via: Sender,
+    value: bigint,
+    block: Cell,
+    signatures: Cell,
+    fileHash: Buffer,
+  ) {
+    await provider.internal(via, {
+      value,
+      sendMode: SendMode.PAY_GAS_SEPARATELY,
+      body: beginCell()
+        .storeUint(OpCodes.OP_CHECKBLOCK, 32)
+        .storeUint(0, 64)
+        .storeBuffer(fileHash, 32)
+        .storeRef(block)
+        .storeRef(signatures)
+        .endCell(),
+    });
   }
 
+
   async getValidators(provider: ContractProvider): Promise<{
-    validators: Dictionary<number, {
-      publicKey: Buffer;
-      weight: bigint;
-      adnlAddress: Buffer | null;
-  }>;
+    validators: Dictionary<Buffer<ArrayBufferLike>, bigint>;
   }> {
     const result = await provider.get("get_validators", []);
     const cell = result.stack.readCellOpt();
@@ -102,7 +111,7 @@ export class LiteClient implements Contract {
     }
   
     const slice = cell.beginParse();
-    const validators = slice.loadDictDirect(Dictionary.Keys.Uint(16), ValidatorDescriptionDictValue)
+    const validators = slice.loadDictDirect(Dictionary.Keys.Buffer(32), Dictionary.Values.BigUint(64));
     return {
       validators
     };

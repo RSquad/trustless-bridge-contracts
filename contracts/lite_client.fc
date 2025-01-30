@@ -3,47 +3,7 @@
 #include "lite_client/errors.fc";
 #include "lite_client/storage.fc";
 #include "imports/ton_msg.lib.fc";
-
-
-(int) check_block_signature(int root_hash, cell signatures_c, int file_hash) impure {
-  (cell validators, int total_weight) = load_validators();
-  slice signatures_s = signatures_c.begin_parse();
-  cell signatures = signatures_s~load_dict();
-
-  int signed_weight = 0;
-  int i = 0;
-  (slice validator, int ok_val?) = validators.udict_get?(16, i);
-  while (ok_val?) {
-      (int v_pub, int v_weight, int v_node_id) = parse_validator(validator);
-  
-    int j = 0;
-      (cell signature, int ok?) = signatures.udict_get_ref?(16, j);
-    while (ok?) {
-      slice sig_s = signature.begin_parse();
-      int node_id_short = sig_s~load_uint(256);
-      slice sig = sig_s~load_bits(512);
-      if (node_id_short == v_node_id) {
-        slice sig_message = begin_cell()
-      .store_uint(0x706e0bc5, 32)
-      .store_uint(root_hash, 256)
-      .store_uint(file_hash, 256)
-      .end_cell().begin_parse();
-        int is_signed = check_data_signature(sig_message, sig, v_pub);
-        if (is_signed) {
-          signed_weight = signed_weight + v_weight;
-        }
-        ok? = 0;
-      } else {
-        j = j + 1;
-          (signature, ok?) = signatures.udict_get_ref?(16, j);
-      }
-    }
-    i = i + 1;
-      (validator, ok_val?) = validators.udict_get?(16, i);
-  }
-
-  return signed_weight * 3 >= 2 * total_weight;
-}
+#include "lite_client/utils.fc";
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
   if ( in_msg_body.slice_empty?() ) { ;; accept simple transfer
@@ -75,88 +35,115 @@
     int file_hash = in_msg_body~load_uint(256);
     int root_hash = cell_hash(block);
 
+    slice custom_s = load_block_custom(block);
+    slice signature_message = build_signature_message(root_hash, file_hash);
     load_globals();
-
-    slice cs = block.begin_parse();
-    cell block_info = cs~load_ref();
-    slice block_info_s = block_info.begin_parse();
-    int block_type = block_info_s~load_uint(32);
-    throw_unless(block_type == 0x9bc7a987, err::unknown_operation);
-    ;; version, not_master, after_merge, before_split, after_split, want_split, want_merge
-    block_info_s~load_uint(38);
-    int key_block = block_info_s~load_uint(1);
-    throw_unless(key_block,  err::unknown_operation);
-    block_info_s~load_uint(1 + 8 + 32 + 32 );
-    block_info_s~load_uint(8);
-    ;; block_info_s~load
-
-    cs~load_ref();
-    cs~load_ref();
-    cell extra = cs~load_ref();
-    slice extra_s = extra.begin_parse();
-    int tag = extra_s~load_uint(32);
-    throw_unless(tag == 0x4a33f6fd, err::unknown_operation);
-    extra_s~load_ref();
-    extra_s~load_ref();
-    extra_s~load_ref();
-    cell custom = extra_s~load_ref();
-    slice custom_s = custom.begin_parse();
-    int custom_magic = custom_s~load_uint(16);
-    throw_unless(custom_magic == 0xcca5, err::unknown_operation);
-    int is_keyblock = custom_s~load_uint(1);
-    throw_unless(is_keyblock, err::unknown_operation);
+    int is_block_signed = check_block_signature(signature_message, signatures_c);
+    throw_unless(is_block_signed, err::unsigned_block);
     custom_s~load_ref();
     custom_s~load_ref();
     custom_s~load_ref();
     cell config = custom_s~load_dict();
     (cell config_34, int flag?) = config.udict_get_ref?(32, 34);
-    throw_unless(flag?, err::unknown_operation);
-
-    int is_block_signed = check_block_signature(root_hash, signatures_c, file_hash);
-    if (is_block_signed) {
-      g::validators = config_34;
-      g::root_hash = root_hash;
-      store_globals();
+    throw_unless(flag?, err::is_not_keyblock);
+    slice config_34_s = config_34.begin_parse();
+    int valsType = config_34_s~load_uint(8);
+    int utimeSince = config_34_s~load_uint(32);
+    int utimeUntil = config_34_s~load_uint(32);
+    int total = config_34_s~load_uint(16);
+    int main = config_34_s~load_uint(16);
+    throw_if(err::wrong_validators_config, total < main);
+    throw_if(err::wrong_validators_config, main < 1);
+    int total_weight = config_34_s~load_uint(64);
+    cell validators_dict = config_34_s~load_dict();
+    int validators_hash = cell_hash(validators_dict);
     
+    if ((validators_hash == g::epoch_hash)) {
+      ( int index,
+        slice validator,
+        int validators::not_end?
+      ) = validators_dict.udict_get_nexteq?(16, 0);
+      
+      while (index < main) {
+        int header =  validator~load_uint(8);
+        if (header == 0x53) {
+          int p_magic = validator~load_uint(32);
+          throw_unless(p_magic == 0x8e81278a, err::wrong_validators_config);
+          int validator_pubkey = validator~load_uint(256);
+          int validator_weight = validator~load_uint(64);
+        }
+        elseif (header == 0x73) {
+          int p_magic = validator~load_uint(32);
+          throw_unless(p_magic == 0x8e81278a, err::wrong_validators_config);
+          int validator_pubkey = validator~load_uint(256);
+          int validator_weight = validator~load_uint(64);
+        } 
+        else {
+          throw_unless(false, err::wrong_validators_config);
+        }
 
-      int query_id = 0;
-      cell msg = build_message(
-        sender_address,
-        0,
-        false,
-        null(),
-        begin_cell()
-          .store_uint(op::new_key_block::success, 32)
-          .store_uint(query_id, 64)
-          .store_uint(root_hash, 256)
-        .end_cell()
-      ).end_cell();
-      send_raw_message(msg, send_mode::carry_remaining_value);
-      return ();
-    }    
+         (index,
+          validator,
+          validators::not_end?
+        ) = validators_dict.udict_get_next?(16, index);
+      }
+  
+      g::epoch_hash = validators_hash;
+      g::total_weight = total_weight;
+      store_globals();
+    }
+
+    cell msg = build_message(
+      sender_address,
+      0,
+      false,
+      null(),
+      begin_cell()
+        .store_uint(op::new_key_block::success, 32)
+        .store_uint(query_id, 64)
+        .store_uint(root_hash, 256)
+      .end_cell()
+    ).end_cell();
+    send_raw_message(msg, send_mode::carry_remaining_value);
     return ();
   }
 
-  ;; check_block#8eaa9d76 query_id:uint64 block:^Cell signatures:^Cell = InternalMsgBody;
-  ;; - checks that block in current epoch
-  ;; - correct sign
-  ;; - send to sender correct#ce02b807 query_id:uint64 block_hash:uint256 = InternalMsgBody;
   if ( op == op::check_block ) {
+    cell block = in_msg_body~load_ref();
+    cell signatures_c = in_msg_body~load_ref();
+    int file_hash = in_msg_body~load_uint(256);
+    int root_hash = cell_hash(block);
+
+    slice cs = block.begin_parse();
+    check_is_masterchain_block(cs~load_ref());
+    slice signature_message = build_signature_message(root_hash, file_hash);
+    load_globals();
+
+    ;; if sign is correct, block in current epoch
+    int is_block_signed = check_block_signature(signature_message, signatures_c);
+    throw_unless(is_block_signed, err::unsigned_block);
+    
+    cell msg = build_message(
+      sender_address,
+      0,
+      false,
+      null(),
+      begin_cell()
+        .store_uint(op::check_block::success, 32)
+        .store_uint(query_id, 64)
+        .store_uint(root_hash, 256)
+      .end_cell()
+    ).end_cell();
+    send_raw_message(msg, send_mode::carry_remaining_value);
     return ();
   }
 
   throw(err::unknown_operation);
 }
 
-cell get_config_34() method_id {
-  load_globals();
-  return g::validators;
-}
-
 cell get_validators() method_id {
   load_globals();
-  (cell validators, _) = load_validators();
-  return validators;
+  return g::validators;
 }
 
 ;; also todo: script to get data from liteservers and generate new_key_block msg

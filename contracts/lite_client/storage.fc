@@ -1,19 +1,22 @@
 #include "errors.fc";
 
 global cell g::validators;
-global int  g::root_hash;
+global int g::total_weight;
+global int g::epoch_hash;
 
 () load_globals() impure {
   var ds = get_data().begin_parse();
-  g::root_hash = ds~load_uint(256);
-  g::validators = ds~load_ref();
+  g::total_weight = ds~load_uint(64);
+  g::epoch_hash = ds~load_uint(256);
+  g::validators = ds~load_dict();
   ds.end_parse();
 }
 
 () store_globals() impure {
   builder data = begin_cell()
-  .store_uint(g::root_hash, 256)
-  .store_ref(g::validators);
+  .store_uint(g::total_weight, 64)
+  .store_uint(g::epoch_hash, 256)
+  .store_dict(g::validators);
   set_data(data.end_cell());
 }
 
