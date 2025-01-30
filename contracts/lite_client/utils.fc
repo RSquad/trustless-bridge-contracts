@@ -1,12 +1,11 @@
 #include "../libs/tvm.lib.fc";
 
-() check_is_masterchain_block(cell block_info) impure inline {
-    slice block_info_s = block_info.begin_parse();
-    int block_type = block_info_s~load_uint(32);
+(int) check_is_not_masterchain_block(slice block_info) inline {
+    int block_type = block_info~load_uint(32);
     throw_unless(err::wrong_block_info, block_type == 0x9bc7a987);
-    block_info_s~skip_bits(32);
-    int not_master = block_info_s~load_uint(1);
-    throw_if(err::is_not_masterchain_block, not_master);
+    block_info~skip_bits(32);
+    int not_master = block_info~load_uint(1);
+    return not_master;
 }
 
 (slice) build_signing_message(int root_hash, int file_hash) inline {
@@ -25,21 +24,24 @@
 
   ( int pubkey,
     slice signature,
-    int signatures::not_end?
+    int ok?
   ) = signatures.udict_get_next?(256, 0);
 
-  while ( signatures::not_end? ) {
+  while (ok?) {
     (slice validator_s, int validator_found?) = g::validators.udict_get?(256, pubkey);
 
     throw_unless(err::wrong_validators_epoch, validator_found?);
     if (check_data_signature(signing_message, signature, pubkey)) {
       int validator_weight = validator_s~load_uint(64);
       signed_weight = signed_weight + validator_weight;
+      if (signed_weight * 3 >= 2 * g::total_weight) {
+        return -1;
+      }
     }
 
     ( pubkey,
       signature,
-      signatures::not_end?
+      ok?
     ) = signatures.udict_get_next?(256, pubkey);
   }
 
@@ -77,8 +79,6 @@
     config_34_s~skip_bits(72);
     int total = config_34_s~load_uint(16);
     int main = config_34_s~load_uint(16);
-    throw_if(err::wrong_validators_config, total < main);
-    throw_if(err::wrong_validators_config, main < 1);
     config_34_s~skip_bits(64); ;; total_weight
     return (config_34_s~load_dict(), main);
 }

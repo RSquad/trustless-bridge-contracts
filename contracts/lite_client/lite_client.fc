@@ -33,8 +33,8 @@
 
     slice signing_message = build_signing_message(root_hash, file_hash);
     load_globals();
-    int is_block_signed = check_block_signatures(signing_message, signatures_slice);
-    throw_unless(err::unsigned_block, is_block_signed);
+    int block_signed? = check_block_signatures(signing_message, signatures_slice);
+    throw_unless(err::unsigned_block, block_signed?);
 
     (cell validators_list, int main) = load_validators_list(custom_s);
     update_validators_dict(validators_list, main);
@@ -52,6 +52,7 @@
       .end_cell()
     ).end_cell();
     send_raw_message(msg, send_mode::carry_remaining_value);
+    store_globals();
     return ();
   }
 
@@ -62,13 +63,16 @@
     int file_hash = in_msg_body~load_uint(256);
     int root_hash = cell_hash(block);
 
-    check_is_masterchain_block(cs~load_ref());
+    throw_if(
+      err::is_not_masterchain_block, 
+      check_is_not_masterchain_block(cs~load_ref_slice())
+    );
     slice signing_message = build_signing_message(root_hash, file_hash);
     load_globals();
 
     ;; if sign is correct, block in current epoch
-    int is_block_signed = check_block_signatures(signing_message, signatures_slice);
-    throw_unless(err::unsigned_block, is_block_signed);
+    int block_signed? = check_block_signatures(signing_message, signatures_slice);
+    throw_unless(err::unsigned_block, block_signed?);
     
     cell msg = build_message(
       sender_address,

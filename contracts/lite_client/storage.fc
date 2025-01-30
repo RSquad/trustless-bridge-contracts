@@ -49,13 +49,13 @@ global int g::epoch_hash;
     return (v_pub, v_weight, v_node_id);
 }
 
-() update_validators_dict(cell validators_dict, int main) impure {
-    int validators_hash = cell_hash(validators_dict);
+() update_validators_dict(cell validators_dict, int main) inline {
+    int vset_hash = cell_hash(validators_dict);
 
-    if (~(validators_hash == g::epoch_hash)) {
+    ifnot (vset_hash == g::epoch_hash) {
       g::validators = new_dict();
       g::total_weight = 0;
-      g::epoch_hash = validators_hash;
+      g::epoch_hash = vset_hash;
       ( int index,
         slice validator,
         int validators::not_end?
@@ -76,7 +76,5 @@ global int g::epoch_hash;
           validators::not_end?
         ) = validators_dict.udict_get_next?(16, index);
       }
-      
-      store_globals();
     }
 }

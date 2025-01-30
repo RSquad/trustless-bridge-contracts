@@ -73,7 +73,7 @@ describe("LiteClientCLI", () => {
   it("should check block", async () => {
     const result = await liteClient.sendCheckBlock(
       deployer.getSender(),
-      toNano("10.05"),
+      toNano(0.1),
       newKeyBlock,
       newKeyBlockSignatures,
       Buffer.from(newKeyBlockFileHash, "hex"),
@@ -96,7 +96,7 @@ describe("LiteClientCLI", () => {
   it("should succesfully check keyblock and update epoch", async () => {
     const result = await liteClient.sendNewKeyBlock(
       deployer.getSender(),
-      toNano("10.05"),
+      toNano(0.1),
       newKeyBlock,
       newKeyBlockSignatures,
       Buffer.from(newKeyBlockFileHash, "hex"),
