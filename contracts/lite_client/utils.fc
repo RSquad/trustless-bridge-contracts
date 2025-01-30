@@ -1,8 +1,8 @@
 #include "../libs/tvm.lib.fc";
 
 (int) check_is_not_masterchain_block(slice block_info) inline {
-    int block_type = block_info~load_uint(32);
-    throw_unless(err::wrong_block_info, block_type == 0x9bc7a987);
+    int block_tag = block_info~load_uint(32);
+    throw_unless(err::wrong_block_info, block_tag == 0x9bc7a987);
     block_info~skip_bits(32);
     int not_master = block_info~load_uint(1);
     return not_master;
