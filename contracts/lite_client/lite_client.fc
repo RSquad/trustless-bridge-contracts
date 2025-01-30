@@ -34,7 +34,7 @@
     slice signing_message = build_signing_message(root_hash, file_hash);
     load_globals();
     int is_block_signed = check_block_signatures(signing_message, signatures_slice);
-    throw_unless(is_block_signed, err::unsigned_block);
+    throw_unless(err::unsigned_block, is_block_signed);
 
     (cell validators_list, int main) = load_validators_list(custom_s);
     update_validators_dict(validators_list, main);
@@ -68,7 +68,7 @@
 
     ;; if sign is correct, block in current epoch
     int is_block_signed = check_block_signatures(signing_message, signatures_slice);
-    throw_unless(is_block_signed, err::unsigned_block);
+    throw_unless(err::unsigned_block, is_block_signed);
     
     cell msg = build_message(
       sender_address,

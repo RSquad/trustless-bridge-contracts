@@ -37,7 +37,7 @@ global int g::epoch_hash;
     int v_header = validator~load_uint(8);
     slice v_str_node_id = validator.preload_bits(32 + 256);
     int v_magic = validator~load_uint(32);
-    throw_unless(v_magic == 0x8e81278a, err::wrong_validator_magic);
+    throw_unless(err::wrong_validator_magic, v_magic == 0x8e81278a);
     int v_pub = validator~load_uint(256);
     int v_weight = validator~load_uint(64);
     slice th = begin_cell()
@@ -64,7 +64,7 @@ global int g::epoch_hash;
       while (index < main) {
         int header =  validator~load_uint(8);
         int p_magic = validator~load_uint(32);
-        throw_unless(p_magic == 0x8e81278a, err::wrong_validators_config);
+        throw_unless(err::wrong_validators_config, p_magic == 0x8e81278a);
         int validator_pubkey = validator~load_uint(256);
         g::total_weight = g::total_weight + validator.preload_uint(64);
         slice validator_weight = validator~load_bits(64);
