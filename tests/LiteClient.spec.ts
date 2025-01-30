@@ -13,9 +13,24 @@ import { LiteClient, OpCodes } from "../wrappers/LiteClient";
 import fs from "fs";
 import path from "path";
 import { extractEpoch, readByFileHash } from "./utils";
-import sigs from "./keyblocks/signaturesA1DBB3C51BC30E32DB706C1B20FA2AB43A3E6639E3314DFB5C09360D7AF75C1E.json";
 
-describe("LiteClient", () => {
+const initialKeyBlockFileHash =
+  "330D95F071CE3DDEE65F7E5362B4F414B20CE7C34E786F8209C12A89C9E2E23D";
+const newKeyBlockFileHash =
+  "505EAD57915465165FEDC7B7D2BABD492BD4299263FD36FC87994947C4A68ED0";
+const initBlockName = "init_block";
+const newBlockName = "new_key_block";
+
+const initialKeyBlock = readByFileHash(initBlockName, "cliexample");
+const initEpoch = extractEpoch(initialKeyBlock);
+const newKeyBlock = readByFileHash(newBlockName, "cliexample");
+const newEpoch = extractEpoch(newKeyBlock);
+const newKeyBlockSignatures = readByFileHash(
+  initBlockName + "_sig",
+  "cliexample",
+);
+
+describe("LiteClientCLI", () => {
   let code: Cell;
 
   beforeAll(async () => {
@@ -29,14 +44,13 @@ describe("LiteClient", () => {
   beforeEach(async () => {
     blockchain = await Blockchain.create();
 
-    const initialKeyblock = readByFileHash(
-      "A1DBB3C51BC30E32DB706C1B20FA2AB43A3E6639E3314DFB5C09360D7AF75C1E",
-    );
-    const epoch = extractEpoch(initialKeyblock);
-
     liteClient = blockchain.openContract(
       LiteClient.createFromConfig(
-        { rootHash: epoch.rootHash, validators: epoch.validators! },
+        {
+          validators: initEpoch.shortValidators,
+          totalWeight: initEpoch.totalWeight,
+          validatorsHash: initEpoch.validatorsHash,
+        },
         code,
       ),
     );
@@ -56,39 +70,38 @@ describe("LiteClient", () => {
     });
   });
 
-  it("should read block", async () => {
-    const secondKeyblock = readByFileHash(
-      "A1DBB3C51BC30E32DB706C1B20FA2AB43A3E6639E3314DFB5C09360D7AF75C1E",
+  it("should check block", async () => {
+    const result = await liteClient.sendCheckBlock(
+      deployer.getSender(),
+      toNano(0.1),
+      newKeyBlock,
+      newKeyBlockSignatures,
+      Buffer.from(newKeyBlockFileHash, "hex"),
     );
-    const epoch = extractEpoch(secondKeyblock);
-    const signatures = Dictionary.empty<number, Cell>(
-      Dictionary.Keys.Uint(16),
-      Dictionary.Values.Cell(),
-    );
-    sigs.result.signatures.forEach((sig, index) => {
-      signatures.set(
-        index,
-        beginCell()
-          .storeBuffer(Buffer.from(sig.node_id_short, "base64"), 32)
-          .storeBuffer(Buffer.from(sig.signature, "base64"), 64)
-          .endCell(),
-      );
-    });
 
+    expect(result.transactions).toHaveTransaction({
+      from: deployer.address,
+      to: liteClient.address,
+      op: OpCodes.OP_CHECKBLOCK,
+      success: true,
+    });
+    expect(result.transactions).toHaveTransaction({
+      from: liteClient.address,
+      to: deployer.address,
+      op: OpCodes.OP_CHECKBLOCK_ANSWER,
+      success: true,
+    });
+  });
+
+  it("should succesfully check keyblock and update epoch", async () => {
     const result = await liteClient.sendNewKeyBlock(
       deployer.getSender(),
-      toNano("10.05"),
-      secondKeyblock,
-      beginCell().storeDict(signatures).endCell(),
-      Buffer.from(
-        "A1DBB3C51BC30E32DB706C1B20FA2AB43A3E6639E3314DFB5C09360D7AF75C1E",
-        "hex",
-      ),
+      toNano(0.1),
+      newKeyBlock,
+      newKeyBlockSignatures,
+      Buffer.from(newKeyBlockFileHash, "hex"),
     );
     await liteClient.getValidators();
-
-    // console.log(result.transactions.map((x) => x.vmLogs));
-    
 
     expect(result.transactions).toHaveTransaction({
       from: deployer.address,
