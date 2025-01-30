@@ -25,6 +25,7 @@ cell merkle_proof::find_tx(cell merkle_proof) impure inline {
   acc_block~load_coins();
   acc_block~load_dict();
   throw_unless(err::invalid_account_block, acc_block~load_uint(4) == 5);
+  acc_block~load_uint(256);
   cell transactions = begin_cell().store_slice(acc_block).end_cell();
   (_, slice value, int ok?) = transactions.udict_get_max?(64);
   throw_unless(err::no_txs, ok?);
