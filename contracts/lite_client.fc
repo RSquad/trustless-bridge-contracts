@@ -47,6 +47,7 @@
         .store_uint(op::new_key_block::success, 32)
         .store_uint(query_id, 64)
         .store_uint(root_hash, 256)
+        .store_slice(in_msg_body)
       .end_cell()
     ).end_cell();
     send_raw_message(msg, send_mode::carry_remaining_value);
@@ -77,6 +78,7 @@
         .store_uint(op::check_block::success, 32)
         .store_uint(query_id, 64)
         .store_uint(root_hash, 256)
+        .store_slice(in_msg_body)
       .end_cell()
     ).end_cell();
     send_raw_message(msg, send_mode::carry_remaining_value);
