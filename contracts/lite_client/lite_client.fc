@@ -1,5 +1,5 @@
-#include "../imports/stdlib.fc";
-#include "../imports/ton_msg.lib.fc";
+#include "../libs/stdlib.fc";
+#include "../libs/ton_msg.lib.fc";
 #include "../libs/errors.lib.fc";
 #include "../libs/tvm.lib.fc";
 #include "opcodes.fc";

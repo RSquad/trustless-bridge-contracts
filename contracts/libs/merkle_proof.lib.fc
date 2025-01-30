@@ -34,3 +34,11 @@ cell merkle_proof::find_tx(cell merkle_proof) impure inline {
   cell tx = value~load_ref();
   return tx;
 }
+
+(cell, int) merkle_proof::load_cell(cell c) impure inline {
+  (slice proof_slice, int exotic?) = c.begin_parse_special();
+  throw_unless(err::invalid_merkle_proof_cell, exotic?);
+  throw_unless(err::invalid_merkle_proof_cell, proof_slice~load_uint(8) == 3);
+  cell pruned_cell = proof_slice~load_ref();
+  return (pruned_cell, pruned_cell.cell_hash_0());
+}
