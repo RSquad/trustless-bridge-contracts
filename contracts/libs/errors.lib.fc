@@ -12,3 +12,6 @@ const int err::wrong_block_custom = 110;
 const int err::unsigned_block = 111;
 const int err::wrong_validators_epoch = 112;
 const int err::wrong_validators_config = 113;
+const int err::tx_hash_mismatch = 114;
+const int err::invalid_merkle_proof_cell = 115;
+const int err::unauthorized_sender = 116;
