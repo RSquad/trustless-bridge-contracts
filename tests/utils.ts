@@ -58,7 +58,7 @@ export const readByFileHash = (fileHash: string, dir = "keyblocks") => {
   return Cell.fromBoc(bufBoc)[0];
 };
 
-export const extractEpoch = (cell: Cell) => {
+export const extractEpoch = (cell: Cell, configId = 34) => {
   const slice = cell.beginParse();
 
   const magic = slice.loadUint(32);
@@ -86,7 +86,8 @@ export const extractEpoch = (cell: Cell) => {
   const isKeyBlock = customSlice.loadUint(1);
   // easier take last cell
   if (!isKeyBlock) {
-    throw Error("not a keyblock");
+    // throw Error("not a keyblock");
+    return undefined;
   }
 
   customSlice.loadRef();
@@ -99,13 +100,17 @@ export const extractEpoch = (cell: Cell) => {
     Dictionary.Keys.BigInt(32),
     Dictionary.Values.Cell(),
   );
-  const validators = dict.get(34n);
+  const validators = dict.get(BigInt(configId));
   const liteClientEpochDict = Dictionary.empty(
     Dictionary.Keys.Buffer(32),
     Dictionary.Values.BigInt(64),
   );
   let totalWeight = 0n;
   let validatorsHash = Buffer.alloc(32);
+  let vals: {
+    publicKey: Buffer<ArrayBufferLike>;
+    weight: bigint;
+}[] = []
   if (validators) {
     const valSlice = validators.beginParse();
     const valsType = valSlice.loadUint(8);
@@ -119,7 +124,8 @@ export const extractEpoch = (cell: Cell) => {
     if (main < 1) {
       throw Error("main < 1");
     }
-    const totalWeight = valSlice.loadUintBig(64);
+    const weight = valSlice.loadUintBig(64);;
+    // totalWeight = valSlice.loadUintBig(64);
     // 64 + 16 + 16 + 32 + 32 + 8 = 192
 
     const validatosCell = valSlice.preloadRef();
@@ -129,7 +135,7 @@ export const extractEpoch = (cell: Cell) => {
       ValidatorDescriptionDictValue,
     );
 
-    const vals = validatorsList
+    vals = validatorsList
       .values()
       .filter((v, i) => i < main)
       .map((v) => ({
@@ -138,6 +144,7 @@ export const extractEpoch = (cell: Cell) => {
       }));
 
     vals.forEach((v) => {
+      totalWeight += v.weight;
       liteClientEpochDict.set(Buffer.from(v.publicKey), v.weight);
     });
   }
@@ -147,5 +154,6 @@ export const extractEpoch = (cell: Cell) => {
     shortValidators: liteClientEpochDict,
     totalWeight,
     validatorsHash,
+    vals: vals,
   };
 };

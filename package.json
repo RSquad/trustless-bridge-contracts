@@ -6,7 +6,7 @@
     "start": "blueprint run",
     "build": "blueprint build --all",
     "test": "jest --verbose",
-    "test:lite": "jest ./tests/LiteClientWithCli.spec.ts"
+    "test:lite": "jest ./tests/LiteClient.spec.ts"
   },
   "devDependencies": {
     "@ton/blueprint": "^0.27.0",

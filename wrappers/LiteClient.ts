@@ -116,4 +116,26 @@ export class LiteClient implements Contract {
       validators
     };
   }
+
+  async getStorage(provider: ContractProvider): Promise<{
+    validators: Dictionary<Buffer<ArrayBufferLike>, bigint>;
+    totalWeight: bigint;
+    epochHash: Buffer;
+  }> {
+    const result = await provider.get("get_storage", []);
+    const cell = result.stack.readCellOpt();
+    if (!cell) {
+      throw Error("no state");
+    }
+  
+    const slice = cell.beginParse();
+    const validators = slice.loadDictDirect(Dictionary.Keys.Buffer(32), Dictionary.Values.BigUint(64));
+    const totalWeight = result.stack.readBigNumber();
+    const epochHash = Buffer.from('0x' + result.stack.readBigNumber().toString(16), 'hex') ;
+    return {
+      validators,
+      totalWeight,
+      epochHash,
+    };
+  }
 }
