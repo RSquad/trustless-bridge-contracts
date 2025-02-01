@@ -227,7 +227,7 @@ describe("LiteClientCLI", () => {
     });
   });
 
-  it.skip("should check block", async () => {
+  it("should check block", async () => {
     const result = await liteClient.sendCheckBlock(
       deployer.getSender(),
       toNano(0.1),
@@ -250,7 +250,7 @@ describe("LiteClientCLI", () => {
     });
   });
 
-  it.skip("should check another block", async () => {
+  it("should check another block", async () => {
     const result = await liteClient.sendCheckBlock(
       deployer.getSender(),
       toNano(0.1),
@@ -273,7 +273,7 @@ describe("LiteClientCLI", () => {
     });
   });
 
-  it.skip("should check block if config 34 not changed", async () => {
+  it("should check block if config 34 not changed", async () => {
     const result = await liteClient.sendCheckBlock(
       deployer.getSender(),
       toNano(0.1),
@@ -338,7 +338,7 @@ describe("LiteClientCLI", () => {
     });
   });
 
-  it.skip("should check block 2", async () => {
+  it("should check block 2", async () => {
     const result = await liteClient.sendCheckBlock(
       deployer.getSender(),
       toNano(0.1),
