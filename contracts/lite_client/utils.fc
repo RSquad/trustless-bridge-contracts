@@ -9,10 +9,6 @@
 }
 
 (slice) build_signing_message(int root_hash, int file_hash) inline {
-  ~strdump("CHECKING BLOCK SIGNATURES");
-  ~dump(root_hash);
-  ~dump(file_hash);
-  ~strdump("CHECKING BLOCK SIGNATURES");
   return begin_cell()
   .store_uint(0x706e0bc5, 32)
   .store_uint(root_hash, 256)
@@ -23,9 +19,7 @@
 
 (int) check_block_signatures(slice signing_message, cell signatures) inline {
   int signed_weight = 0;
-  ~dump(signed_weight);
-  ~dump(g::total_weight);
-
+  
   ( int pubkey,
     slice signature,
     int ok?
@@ -33,29 +27,13 @@
 
   while (ok?) {
     (slice validator_s, int validator_found?) = g::validators.udict_get?(256, pubkey);
-    ifnot (validator_found?) {
-      ~strdump("UNKNOWN EXPECTED VALIDATOR");
-      ( int index1,
-        slice validator1,
-        int validators::not_end?1
-      ) = g::validators.udict_get_nexteq?(16, 0);
-      ~dump(pubkey);
-      ~dump(index1);
-    }
     throw_unless(err::wrong_validators_epoch, validator_found?);
     if (check_data_signature(signing_message, signature, pubkey)) {
       int validator_weight = validator_s~load_uint(64);
       signed_weight = signed_weight + validator_weight;
-      ~strdump("SIGNED");
-      ~dump(signature);
       if (signed_weight * 3 >= 2 * g::total_weight) {
         return -1;
       }
-    } else {
-      ~strdump("UNSIGNED");
-      ~dump(signing_message);
-      ~dump(signature);
-      ~dump(pubkey);
     }
 
     ( pubkey,
@@ -67,8 +45,7 @@
   return signed_weight * 3 >= 2 * g::total_weight;
 }
 
-(slice) load_block_custom(cell block) inline {
-    slice cs = block.begin_parse();
+(slice) load_block_custom(slice cs) inline {
     cs~load_ref();
     cs~load_ref();
     cs~load_ref();

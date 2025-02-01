@@ -58,8 +58,11 @@ export const readByFileHash = (fileHash: string, dir = "keyblocks") => {
   return Cell.fromBoc(bufBoc)[0];
 };
 
-export const extractEpoch = (cell: Cell, configId = 34) => {
-  const slice = cell.beginParse();
+export const extractEpoch = (cell: Cell, configId = 34, allowExotic = false) => {
+  let slice = cell.beginParse(allowExotic);
+  if (allowExotic) {
+    slice = slice.loadRef().beginParse();
+  }
 
   const magic = slice.loadUint(32);
   if (magic !== 0x11ef55aa) {
@@ -70,7 +73,10 @@ export const extractEpoch = (cell: Cell, configId = 34) => {
   const valueFlow = slice.loadRef();
   const stateUpdate = slice.loadRef();
   const extra = slice.loadRef();
-  const extraS = extra!.beginParse();
+  if (extra.isExotic) {
+    return undefined;
+  }
+  const extraS = extra!.beginParse(allowExotic);
 
   extraS.loadRef();
   extraS.loadRef();

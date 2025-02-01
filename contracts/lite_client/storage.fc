@@ -53,7 +53,6 @@ global int g::epoch_hash;
     int vset_hash = cell_hash(validators_dict);
 
     ifnot (vset_hash == g::epoch_hash) {
-      ~strdump("updating validators dict");
       g::validators = new_dict();
       g::total_weight = 0;
       g::epoch_hash = vset_hash;
@@ -77,7 +76,5 @@ global int g::epoch_hash;
           validators::not_end?
         ) = validators_dict.udict_get_next?(16, index);
       }
-    } else {
-      ~strdump("skipping validators dict update");
     }
 }

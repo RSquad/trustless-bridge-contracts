@@ -24,14 +24,14 @@ export const OpCodes = {
   OP_NEW_KEYBLOCK_ANSWER: 0xff8ff4e1,
   OP_CHECKBLOCK: 0x9af476bc,
   OP_CHECKBLOCK_ANSWER: 0xce02b807,
-}
+};
 
 export function liteClientConfigToCell(config: LiteClientConfig): Cell {
   return beginCell()
-  .storeUint(config.totalWeight, 64)
-  .storeBuffer(config.validatorsHash, 32)
-  .storeDict(config.validators)
-  .endCell()
+    .storeUint(config.totalWeight, 64)
+    .storeBuffer(config.validatorsHash, 32)
+    .storeDict(config.validators)
+    .endCell();
 }
 
 export class LiteClient implements Contract {
@@ -72,8 +72,12 @@ export class LiteClient implements Contract {
       body: beginCell()
         .storeUint(OpCodes.OP_NEW_KEYBLOCK, 32)
         .storeUint(0, 64)
-        .storeBuffer(fileHash, 32)
-        .storeRef(block)
+        .storeRef(
+          beginCell()
+            .storeBuffer(fileHash, 32)
+            .storeRef(block)
+          .endCell(),
+        )
         .storeRef(signatures)
         .endCell(),
     });
@@ -93,13 +97,16 @@ export class LiteClient implements Contract {
       body: beginCell()
         .storeUint(OpCodes.OP_CHECKBLOCK, 32)
         .storeUint(0, 64)
-        .storeBuffer(fileHash, 32)
-        .storeRef(block)
+        .storeRef(
+          beginCell()
+            .storeBuffer(fileHash, 32)
+            .storeRef(block)
+          .endCell(),
+        )
         .storeRef(signatures)
         .endCell(),
     });
   }
-
 
   async getValidators(provider: ContractProvider): Promise<{
     validators: Dictionary<Buffer<ArrayBufferLike>, bigint>;
@@ -109,11 +116,14 @@ export class LiteClient implements Contract {
     if (!cell) {
       throw Error("no state");
     }
-  
+
     const slice = cell.beginParse();
-    const validators = slice.loadDictDirect(Dictionary.Keys.Buffer(32), Dictionary.Values.BigUint(64));
+    const validators = slice.loadDictDirect(
+      Dictionary.Keys.Buffer(32),
+      Dictionary.Values.BigUint(64),
+    );
     return {
-      validators
+      validators,
     };
   }
 
@@ -127,11 +137,17 @@ export class LiteClient implements Contract {
     if (!cell) {
       throw Error("no state");
     }
-  
+
     const slice = cell.beginParse();
-    const validators = slice.loadDictDirect(Dictionary.Keys.Buffer(32), Dictionary.Values.BigUint(64));
+    const validators = slice.loadDictDirect(
+      Dictionary.Keys.Buffer(32),
+      Dictionary.Values.BigUint(64),
+    );
     const totalWeight = result.stack.readBigNumber();
-    const epochHash = Buffer.from('0x' + result.stack.readBigNumber().toString(16), 'hex') ;
+    const epochHash = Buffer.from(
+      "0x" + result.stack.readBigNumber().toString(16),
+      "hex",
+    );
     return {
       validators,
       totalWeight,

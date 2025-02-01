@@ -15,3 +15,4 @@ const int err::wrong_validators_config = 113;
 const int err::tx_hash_mismatch = 114;
 const int err::invalid_merkle_proof_cell = 115;
 const int err::unauthorized_sender = 116;
+const int err::wrong_merkle_proof = 116;
