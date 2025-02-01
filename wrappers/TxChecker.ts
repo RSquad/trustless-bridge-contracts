@@ -9,11 +9,11 @@ import {
   Sender,
   SendMode,
 } from "@ton/core";
-
+import { OpCodes as LiteClientOpCodes } from "./LiteClient"; 
 export const OpCodes = {
   OP_CHECK_TRANSACTION: 0x91d555f7,
   OP_TRANSACTION_CHECKED: 0x756adff1,
-}
+};
 
 export type TxCheckerConfig = {
   liteClientAddress: Address;
@@ -39,12 +39,20 @@ export class TxChecker implements Contract {
     return new TxChecker(contractAddress(workchain, init), init);
   }
 
-  static packCurrentBlock(fileHash: string, prunedBlock: Cell, signatures: Cell): Cell {
+  static packCurrentBlock(
+    fileHash: string,
+    prunedBlock: Cell,
+    signatures: Cell,
+  ): Cell {
     return beginCell()
-        .storeBuffer(Buffer.from(fileHash, "hex"), 32)
-        .storeRef(prunedBlock)
-        .storeRef(signatures)
-        .endCell();
+      .storeRef(
+        beginCell()
+          .storeBuffer(Buffer.from(fileHash, "hex"), 32)
+          .storeRef(prunedBlock)
+          .endCell(),
+      )
+      .storeRef(signatures)
+      .endCell();
   }
 
   async sendDeploy(provider: ContractProvider, via: Sender, value: bigint) {
@@ -73,6 +81,29 @@ export class TxChecker implements Contract {
         .storeRef(ops.transaction)
         .storeRef(ops.proof)
         .storeRef(ops.currentBlock)
+        .endCell(),
+    });
+  }
+
+  async sendCheckBlockAnswer(
+    provider: ContractProvider,
+    via: Sender,
+    value: bigint,
+    ops: {
+      blockHash: string;
+      transaction: Cell;
+      recipientAddress: Address;
+    },
+  ) {
+    await provider.internal(via, {
+      value,
+      sendMode: SendMode.PAY_GAS_SEPARATELY,
+      body: beginCell()
+        .storeUint(LiteClientOpCodes.OP_CHECKBLOCK_ANSWER, 32)
+        .storeUint(0, 64)
+        .storeBuffer(Buffer.from(ops.blockHash, "hex"), 32)
+        .storeRef(ops.transaction)
+        .storeAddress(ops.recipientAddress)
         .endCell(),
     });
   }

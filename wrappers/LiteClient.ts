@@ -20,9 +20,9 @@ export type LiteClientConfig = {
 };
 
 export const OpCodes = {
-  OP_NEW_KEYBLOCK: 0x2d69cd97,
+  OP_NEW_KEYBLOCK: 0x11a78ffe,
   OP_NEW_KEYBLOCK_ANSWER: 0xff8ff4e1,
-  OP_CHECKBLOCK: 0x9af476bc,
+  OP_CHECKBLOCK: 0x8eaa9d76,
   OP_CHECKBLOCK_ANSWER: 0xce02b807,
 }
 

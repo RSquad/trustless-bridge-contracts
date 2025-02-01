@@ -52,7 +52,7 @@ global slice g::lite_client_address;
 () op_handler::receive_check_block_ok(
   slice recipient_address,
   cell transaction
-) inline {
+) impure inline {
   cell msg = build_message(
     recipient_address,
     0,
@@ -86,21 +86,20 @@ global slice g::lite_client_address;
 
   slice sender_address = cs~load_msg_addr();
   int op = in_msg_body~load_uint(32);
+  load_globals();
 
   if (op::check_transaction == op) {
     ;; check_transaction#91d555f7 
-    ;;   transaction:^[tx_hash:uint256] 
+    ;;   transaction:^[tx_hash:uint256 account_addr:uint256 tx_lt:uint64] 
     ;;   proof:^(MerkleProof Transaction) 
     ;;   current_block:^[ 
-    ;;      file_hash:uint256 
-    ;;      pruned_block:^Cell 
+    ;;      block:^[file_hash:uint256 pruned_block:^Cell] 
     ;;      signatures:^Cell
     ;;   ] 
     ;; = InternalMsgBody;
     cell transaction = in_msg_body~load_ref();
     cell proof = in_msg_body~load_ref();
     slice current_block = in_msg_body~load_ref_slice();
-    load_globals();
     op_handler::check_transaction(sender_address, transaction, proof, current_block);
     return ();
   } 
@@ -108,7 +107,7 @@ global slice g::lite_client_address;
   if (op::check_block::success == op) {
     throw_unless(err::unauthorized_sender, equal_slices_bits(sender_address, g::lite_client_address));
     ;; skip query_id + block_hash
-    in_msg_body~load_uint(64 + 256);
+    in_msg_body~skip_bits(64 + 256);
     slice recipient_address = in_msg_body~load_msg_addr();
     cell transaction = in_msg_body~load_ref();
     op_handler::receive_check_block_ok(recipient_address, transaction);
