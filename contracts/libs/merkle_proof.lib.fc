@@ -20,31 +20,23 @@ cell merkle_proof::find_tx(
   slice block = ref_cell.begin_parse();
   int tag = block~load_uint(32);
   throw_unless(err::invalid_block_tag, tag == 0x11ef55aa);
-  ;; skip info, value_flow, and state_update
-  block~load_ref();
-  block~load_ref();
-  block~load_ref();
   ;; load ref with extra
-  slice extra = block~load_ref_slice();
-  ;; skip in_msg_descr, out_msg_descr
-  extra~load_ref();
-  extra~load_ref();
+  slice extra = block.load_ref_3().begin_parse();
   ;; load account_blocks
-  slice s = extra~load_ref_slice();
+  slice s = extra.load_ref_2().begin_parse();
   cell account_blocks = s~load_dict();
-  ;; assume there is only one account - all others are pruned
-  (slice acc_block, int ok?) = account_blocks.hm_get?(256, account_addr);
-  throw_unless(err::no_accounts, ok?);
-  ;; skip CurrencyCollection
+  ;; assume there is only one account - all other are pruned
+  slice acc_block = account_blocks.hm_get(256, account_addr);
+  ;; skip CurrencyCollection (extra)
   acc_block~load_coins();
   acc_block~load_dict();
   throw_unless(err::invalid_account_block, acc_block~load_uint(4) == 5);
-  acc_block~load_uint(256);
-  cell transactions = begin_cell().store_slice(acc_block).end_cell();
-  (slice value, int ok?) = transactions.hm_get?(64, tx_lt);
-  throw_unless(err::no_txs, ok?);
-  value~load_coins();
-  value~load_dict();
-  cell tx = value~load_ref();
+  acc_block~load_prefix(account_addr);
+  ;; remaining part of acc_block is a hashmapAug with transactions.
+  slice tx_aug = acc_block.hmslice_get(64, tx_lt);
+  ;; skip CurrencyCollection (extra)
+  tx_aug~load_coins();
+  tx_aug~load_dict();
+  cell tx = tx_aug~load_ref();
   return tx;
 }

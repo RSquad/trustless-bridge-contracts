@@ -1,6 +1,7 @@
 (slice, slice) ~load_ref_slice(slice s) asm "LDREFRTOS";
 int cell_hash_0(cell c) asm "0 CHASHI";
 (slice, int) begin_parse_special(cell c) asm "XCTOS";
+cell load_ref_2(slice s) asm "2 PLDREFIDX";
 cell load_ref_3(slice s) asm "3 PLDREFIDX";
 int ubit_size(int x) asm "UBITSIZE";
 (slice, int) ~ldones(slice s) asm(-> 1 0) "LDONES";

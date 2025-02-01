@@ -15,7 +15,7 @@ global slice g::lite_client_address;
 (int,   ;; transaction hash
  slice, ;; transaction account addr (uint256 as slice)
  slice  ;; transaction logical time (uint64 as slice)
-) load_transaction_data(cell tx) inline {
+) unpack_transaction_cell(cell tx) inline {
   slice ts = tx.begin_parse();
   return (ts~load_uint(256), ts~load_bits(256), ts~load_bits(64));
 }
@@ -26,7 +26,7 @@ global slice g::lite_client_address;
   cell proof,
   slice current_block
 ) impure inline {
-  (int tx_hash, slice account_addr, slice tx_lt) = transaction.load_transaction_data();
+  (int tx_hash, slice account_addr, slice tx_lt) = transaction.unpack_transaction_cell();
   cell tx = proof.merkle_proof::find_tx(account_addr, tx_lt);
   throw_unless(err::tx_hash_mismatch, tx.cell_hash() == tx_hash);
   

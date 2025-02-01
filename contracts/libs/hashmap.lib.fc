@@ -36,12 +36,12 @@ Functions for loading values from Hashmap & HashmapAug.
 
 ;; Loads value from Hashmap or HashmapAug using slice as a key.
 ;; Remark: HashmapAug's extra value is ignored in node fork.
-(slice, int) hm_get?(
-  cell dict,   ;; dict root cell
+;; Warning: this function throws exception if key not found in the dictionary.
+slice hmslice_get(
+  slice ds,   ;; dict root slice
   int key_len, ;; dict key length
   slice key    ;; dict key as slice
 ) impure inline_ref {
-  slice ds = dict.begin_parse();
   while (key_len) {
     (slice key_prefix, int l) = ds~hm::load_label(key_len);
     key~load_prefix(key_prefix);
@@ -54,5 +54,15 @@ Functions for loading values from Hashmap & HashmapAug.
       key_len -= 1;
     }
   }
-  return (ds, true);
+  return ds;
+}
+
+;; Loads value from Hashmap or HashmapAug using slice as a key.
+;; NOTE: dict passed as cell.
+slice hm_get(
+  cell dict,   ;; dict root cell
+  int key_len, ;; dict key length
+  slice key    ;; dict key as slice
+) impure inline {
+  return dict.begin_parse().hmslice_get(key_len, key);
 }
