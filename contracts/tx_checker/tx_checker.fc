@@ -12,15 +12,22 @@ global slice g::lite_client_address;
   g::lite_client_address = ds~load_msg_addr();
 }
 
+(int,   ;; transaction hash
+ slice, ;; transaction account addr (uint256 as slice)
+ slice  ;; transaction logical time (uint64 as slice)
+) load_transaction_data(cell tx) inline {
+  slice ts = tx.begin_parse();
+  return (ts~load_uint(256), ts~load_bits(256), ts~load_bits(64));
+}
+
 () op_handler::check_transaction(
   slice sender_address,
   cell transaction,
   cell proof,
   slice current_block
 ) impure inline {
-  int tx_hash = transaction.begin_parse().preload_uint(256);
-  (cell block_with_tx, int block_hash) = proof.merkle_proof::load_cell();
-  cell tx = block_with_tx.merkle_proof::find_tx();
+  (int tx_hash, slice account_addr, slice tx_lt) = transaction.load_transaction_data();
+  cell tx = proof.merkle_proof::find_tx(account_addr, tx_lt);
   throw_unless(err::tx_hash_mismatch, tx.cell_hash() == tx_hash);
   
   cell msg = build_message(
@@ -79,8 +86,6 @@ global slice g::lite_client_address;
 
   slice sender_address = cs~load_msg_addr();
   int op = in_msg_body~load_uint(32);
-
-  load_globals();
 
   if (op::check_transaction == op) {
     ;; check_transaction#91d555f7 
