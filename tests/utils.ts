@@ -1,15 +1,13 @@
 import {
-  beginCell,
   Builder,
   Cell,
   Dictionary,
   DictionaryValue,
   Slice,
 } from "@ton/core";
-import { loadConfigParamById, parseValidatorSet } from "@ton/ton";
+
 import fs from "fs";
 import path from "path";
-import { sha256_sync } from "@ton/crypto";
 
 function readPublicKey(slice: Slice) {
   // 8e81278a

@@ -12,15 +12,22 @@ global slice g::lite_client_address;
   g::lite_client_address = ds~load_msg_addr();
 }
 
+(int,   ;; transaction hash
+ slice, ;; transaction account addr (uint256 as slice)
+ slice  ;; transaction logical time (uint64 as slice)
+) unpack_transaction_cell(cell tx) inline {
+  slice ts = tx.begin_parse();
+  return (ts~load_uint(256), ts~load_bits(256), ts~load_bits(64));
+}
+
 () op_handler::check_transaction(
   slice sender_address,
   cell transaction,
   cell proof,
   slice current_block
 ) impure inline {
-  int tx_hash = transaction.begin_parse().preload_uint(256);
-  (cell block_with_tx, int block_hash) = proof.merkle_proof::load_cell();
-  cell tx = block_with_tx.merkle_proof::find_tx();
+  (int tx_hash, slice account_addr, slice tx_lt) = transaction.unpack_transaction_cell();
+  cell tx = proof.merkle_proof::find_tx(account_addr, tx_lt);
   throw_unless(err::tx_hash_mismatch, tx.cell_hash() == tx_hash);
   
   cell msg = build_message(
@@ -45,7 +52,7 @@ global slice g::lite_client_address;
 () op_handler::receive_check_block_ok(
   slice recipient_address,
   cell transaction
-) inline {
+) impure inline {
   cell msg = build_message(
     recipient_address,
     0,
@@ -79,23 +86,20 @@ global slice g::lite_client_address;
 
   slice sender_address = cs~load_msg_addr();
   int op = in_msg_body~load_uint(32);
-
   load_globals();
 
   if (op::check_transaction == op) {
     ;; check_transaction#91d555f7 
-    ;;   transaction:^[tx_hash:uint256] 
+    ;;   transaction:^[tx_hash:uint256 account_addr:uint256 tx_lt:uint64] 
     ;;   proof:^(MerkleProof Transaction) 
     ;;   current_block:^[ 
-    ;;      file_hash:uint256 
-    ;;      pruned_block:^Cell 
+    ;;      block:^[file_hash:uint256 pruned_block:^Cell] 
     ;;      signatures:^Cell
     ;;   ] 
     ;; = InternalMsgBody;
     cell transaction = in_msg_body~load_ref();
     cell proof = in_msg_body~load_ref();
     slice current_block = in_msg_body~load_ref_slice();
-    load_globals();
     op_handler::check_transaction(sender_address, transaction, proof, current_block);
     return ();
   } 
@@ -103,7 +107,7 @@ global slice g::lite_client_address;
   if (op::check_block::success == op) {
     throw_unless(err::unauthorized_sender, equal_slices_bits(sender_address, g::lite_client_address));
     ;; skip query_id + block_hash
-    in_msg_body~load_uint(64 + 256);
+    in_msg_body~skip_bits(64 + 256);
     slice recipient_address = in_msg_body~load_msg_addr();
     cell transaction = in_msg_body~load_ref();
     op_handler::receive_check_block_ok(recipient_address, transaction);

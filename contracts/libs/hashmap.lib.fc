@@ -1,0 +1,68 @@
+#include "stdlib.fc";
+#include "tvm.lib.fc";
+
+{- 
+Functions for loading values from Hashmap & HashmapAug.
+-}
+
+;; Loads HmLabel from dict slice
+(slice, (slice, int)) ~hm::load_label(
+  slice ds, ;; dict slice
+  int key_len ;; remaining length of the dict key
+) inline {
+  {- 
+  hml_short$0 {m:#} {n:#} len:(Unary ~n) {n <= m} s:(n * Bit) = HmLabel ~n m;
+  hml_long$10 {m:#} n:(#<= m) s:(n * Bit) = HmLabel ~n m;
+  hml_same$11 {m:#} v:Bit n:(#<= m) = HmLabel ~n m;
+  -}
+  int label_tag = ds~load_uint(2);
+  if (label_tag == 0x2) { ;; hml_long$10
+    int n_len = ubit_size(key_len);
+    int n = ds~load_uint(n_len);
+    slice s = ds~load_bits(n);
+    return (ds, (s, n));
+  }
+  if (label_tag == 0x3) { ;; hml_same$11
+    slice s = ds~load_bits(1);
+    int n_len = ubit_size(key_len);
+    int n = ds~load_uint(n_len);
+    return (ds, (s, n));
+  }
+  ;;  hml_short$0
+  int n = ds~load_unary() + label_tag;
+  slice s = ds~load_bits(n);
+  return (ds, (s, n));
+}
+
+;; Loads value from Hashmap or HashmapAug using slice as a key.
+;; Remark: HashmapAug's extra value is ignored in node fork.
+;; Warning: this function throws exception if key not found in the dictionary.
+slice hmslice_get(
+  slice ds,   ;; dict root slice
+  int key_len, ;; dict key length
+  slice key    ;; dict key as slice
+) impure inline_ref {
+  while (key_len) {
+    (slice key_prefix, int l) = ds~hm::load_label(key_len);
+    key~load_prefix(key_prefix);
+    key_len -= l;
+    if (key_len != 0) {
+      if (key~load_uint(1)) {
+        ds~load_ref();
+      }
+      ds = ds~load_ref_slice();
+      key_len -= 1;
+    }
+  }
+  return ds;
+}
+
+;; Loads value from Hashmap or HashmapAug using slice as a key.
+;; NOTE: dict passed as cell.
+slice hm_get(
+  cell dict,   ;; dict root cell
+  int key_len, ;; dict key length
+  slice key    ;; dict key as slice
+) impure inline {
+  return dict.begin_parse().hmslice_get(key_len, key);
+}

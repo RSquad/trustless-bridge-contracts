@@ -16,6 +16,12 @@
   throw(err::unknown_operation);
 }
 
-cell get_merkle_proof_find_tx(cell proof) method_id {
-  return merkle_proof::find_tx(proof);
+cell get_merkle_proof_find_tx(
+  cell proof, 
+  int account_addr, 
+  int tx_lt
+) method_id {
+  slice addr_s = begin_cell().store_uint(account_addr, 256).end_cell().begin_parse();
+  slice lt_s = begin_cell().store_uint(tx_lt, 64).end_cell().begin_parse();
+  return merkle_proof::find_tx(proof, addr_s, lt_s);
 }
