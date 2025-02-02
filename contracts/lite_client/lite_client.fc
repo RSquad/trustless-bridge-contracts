@@ -21,19 +21,22 @@
   int query_id = in_msg_body~load_uint(64);
 
   if ( op == op::new_key_block ) {
-    ;; (slice cs, int special) = block.begin_parse_special();
-    ;; cell test = cs~load_ref();
-    cell block = in_msg_body~load_ref();
-    slice signatures_slice = in_msg_body~load_ref_slice();
-    int file_hash = in_msg_body~load_uint(256);
-    int root_hash = cell_hash(block);
+    slice block_proof = in_msg_body~load_ref_slice();
+    cell block_merkle_proof = block_proof~load_ref();
+    int file_hash = block_proof~load_uint(256);
+    (slice cs, int special) = block_merkle_proof.begin_parse_special();
+    throw_unless(err::wrong_merkle_proof, special);
+    throw_if(err::wrong_merkle_proof, cs~load_uint(8) != 3);
+    int root_hash = cs~load_uint(256);
+    slice block_slice = cs~load_ref_slice();
+    cell signatures = in_msg_body~load_ref();
 
     ;; also checks if the block is keyblock
-    slice custom_s = load_block_custom(block);
+    slice custom_s = load_block_custom(block_slice);
 
     slice signing_message = build_signing_message(root_hash, file_hash);
     load_globals();
-    int block_signed? = check_block_signatures(signing_message, signatures_slice);
+    int block_signed? = check_block_signatures(signing_message, signatures);
     throw_unless(err::unsigned_block, block_signed?);
 
     (cell validators_list, int main) = load_validators_list(custom_s);
@@ -57,21 +60,25 @@
   }
 
   if ( op == op::check_block ) {
-    cell block = in_msg_body~load_ref();
-    slice cs = block.begin_parse();
-    slice signatures_slice = in_msg_body~load_ref_slice();
-    int file_hash = in_msg_body~load_uint(256);
-    int root_hash = cell_hash(block);
+    slice block_proof = in_msg_body~load_ref_slice();
+    cell block_merkle_proof = block_proof~load_ref();
+    int file_hash = block_proof~load_uint(256);
+    (slice cs, int special) = block_merkle_proof.begin_parse_special();
+    throw_unless(err::wrong_merkle_proof, special);
+    throw_if(err::wrong_merkle_proof, cs~load_uint(8) != 3);
+    int root_hash = cs~load_uint(256);
+    slice block_slice = cs~load_ref_slice();
+    cell signatures = in_msg_body~load_ref();
 
     throw_if(
       err::is_not_masterchain_block, 
-      check_is_not_masterchain_block(cs~load_ref_slice())
+      check_is_not_masterchain_block(block_slice~load_ref_slice())
     );
     slice signing_message = build_signing_message(root_hash, file_hash);
     load_globals();
 
     ;; if sign is correct, block in current epoch
-    int block_signed? = check_block_signatures(signing_message, signatures_slice);
+    int block_signed? = check_block_signatures(signing_message, signatures);
     throw_unless(err::unsigned_block, block_signed?);
     
     cell msg = build_message(
@@ -96,4 +103,9 @@
 cell get_validators() method_id {
   load_globals();
   return g::validators;
+}
+
+(cell, int, int) get_storage() method_id {
+  load_globals();
+  return (g::validators, g::total_weight, g::epoch_hash);
 }

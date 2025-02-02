@@ -17,11 +17,9 @@
   .begin_parse();
 }
 
-(int) check_block_signatures(slice signing_message, slice signatures_slice) inline {
-  cell signatures = signatures_slice~load_dict();
-
+(int) check_block_signatures(slice signing_message, cell signatures) inline {
   int signed_weight = 0;
-
+  
   ( int pubkey,
     slice signature,
     int ok?
@@ -29,7 +27,6 @@
 
   while (ok?) {
     (slice validator_s, int validator_found?) = g::validators.udict_get?(256, pubkey);
-
     throw_unless(err::wrong_validators_epoch, validator_found?);
     if (check_data_signature(signing_message, signature, pubkey)) {
       int validator_weight = validator_s~load_uint(64);
@@ -48,8 +45,7 @@
   return signed_weight * 3 >= 2 * g::total_weight;
 }
 
-(slice) load_block_custom(cell block) inline {
-    slice cs = block.begin_parse();
+(slice) load_block_custom(slice cs) inline {
     cs~load_ref();
     cs~load_ref();
     cs~load_ref();

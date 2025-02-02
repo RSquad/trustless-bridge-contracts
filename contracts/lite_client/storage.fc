@@ -49,7 +49,7 @@ global int g::epoch_hash;
     return (v_pub, v_weight, v_node_id);
 }
 
-() update_validators_dict(cell validators_dict, int main) inline {
+() update_validators_dict(cell validators_dict, int main) impure inline {
     int vset_hash = cell_hash(validators_dict);
 
     ifnot (vset_hash == g::epoch_hash) {
