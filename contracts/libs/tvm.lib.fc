@@ -8,4 +8,3 @@ int ubit_size(int x) asm "UBITSIZE";
 (slice, int) ~load_unary(slice s) asm(-> 1 0) "LDONES 1 LDU NIP";
 (slice, ()) ~load_prefix(slice s, slice prefix) asm "SDBEGINSX";
 cell preload_ref_index(slice s, int n) asm "PLDREFVAR";
-;; cell ~preload_ref_index(slice s, int n) asm "PLDREFVAR";
