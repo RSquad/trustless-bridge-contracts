@@ -23,23 +23,69 @@ type CHECK_TRANSACTION_TEST = {
   proof: Cell;
   currentBlock: Cell;
 };
-const TEST_CASES: CHECK_TRANSACTION_TEST[] = [
-  {
+
+const createTestCase = (
+  seqno: number,
+  fileHash: string,
+  txhash: string,
+  accountAddr: string,
+  txlt: bigint,
+): CHECK_TRANSACTION_TEST => {
+  const dir = "cliexample";
+  return {
     transaction: TxChecker.packTransaction({
-      txhash:
-        "E36ABF1A2DC3C028C117E7C979E29FF51D71D4EECF51DB910BA4FCC8D05B4C3F",
-      accountAddr:
-        "5555555555555555555555555555555555555555555555555555555555555555",
-      txlt: 30803209000003n,
+      txhash,
+      accountAddr,
+      txlt,
     }),
-    proof: readBockFromFile("txproof_E36ABF_block_27626103", "cliexample"),
+    proof: readBockFromFile(
+      `txproof_${txhash.slice(0, 6)}_block_${seqno.toString()}`,
+      dir,
+    ),
     currentBlock: TxChecker.packCurrentBlock({
-      fileHash:
-        "3DB14851B77E1DA2D7331B340314DC7C0D6BB1FCF0274C361F3B1633A86BB8AD",
-      prunedBlock: readBockFromFile("pruned_block_27626103", "cliexample"),
-      signatures: readBockFromFile("block_signatures_27626103", "cliexample"),
+      fileHash,
+      prunedBlock: readBockFromFile(`pruned_block_${seqno.toString()}`, dir),
+      signatures: readBockFromFile(`block_signatures_${seqno.toString()}`, dir),
     }),
-  },
+  };
+};
+
+const TEST_CASES: CHECK_TRANSACTION_TEST[] = [
+  createTestCase(
+    27626103,
+    "3DB14851B77E1DA2D7331B340314DC7C0D6BB1FCF0274C361F3B1633A86BB8AD",
+    "E36ABF1A2DC3C028C117E7C979E29FF51D71D4EECF51DB910BA4FCC8D05B4C3F",
+    "5555555555555555555555555555555555555555555555555555555555555555",
+    30803209000003n,
+  ),
+  createTestCase(
+    27620829,
+    "8C260145BCB30D8AF1EC48D9C7A98DC4FC9F43A616BBDB76AC1804D28C3044A8",
+    "13D7C48E429DFC6470164BB9E51FFD2A46A91FBC544EBE0E9B442322182A1A6C",
+    "05ce881221c7876c939140f023ee93dc8a24790cb87081b831620c5a2ffedf41",
+    30797635000001n,
+  ),
+  createTestCase(
+    27620829,
+    "8C260145BCB30D8AF1EC48D9C7A98DC4FC9F43A616BBDB76AC1804D28C3044A8",
+    "E14B6A3D86BFA336D42C7D8500372FB5DD7A8F28965810100D149D3B0DF83DF6",
+    "05ce881221c7876c939140f023ee93dc8a24790cb87081b831620c5a2ffedf41",
+    30797635000005n,
+  ),
+  createTestCase(
+    27620829,
+    "8C260145BCB30D8AF1EC48D9C7A98DC4FC9F43A616BBDB76AC1804D28C3044A8",
+    "CBE9559D7DC5D01019040166FEAD2AD484B59BEE1A83D9C52ECDD0FB57D376DA",
+    "7D833E7C484C437B115526D78E49970F0F115EBA345C2B83B2F6A0617C90B92F",
+    30797635000003n,
+  ),
+  createTestCase(
+    27620829,
+    "8C260145BCB30D8AF1EC48D9C7A98DC4FC9F43A616BBDB76AC1804D28C3044A8",
+    "A09B43578F26BD626D3A38E6CD6B581823A3753488B2611B10F528976F433081",
+    "3333333333333333333333333333333333333333333333333333333333333333",
+    30797635000002n,
+  ),
 ];
 
 describe("Integration tests", () => {
@@ -127,12 +173,12 @@ describe("Integration tests", () => {
     });
   };
 
-  it("Check transaction flow (success)", async () => {
+  it.each(TEST_CASES)("Check transaction flow (success)", async (t) => {
     const result = await txChecker.sendCheckTransaction(
       deployer.getSender(),
       toNano(0.1),
-      TEST_CASES[0],
+      t,
     );
-    expectCheckTransactionSucceeded(result, TEST_CASES[0]);
+    expectCheckTransactionSucceeded(result, t);
   });
 });
