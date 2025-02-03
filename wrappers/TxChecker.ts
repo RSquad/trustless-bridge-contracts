@@ -9,7 +9,7 @@ import {
   Sender,
   SendMode,
 } from "@ton/core";
-import { OpCodes as LiteClientOpCodes } from "./LiteClient"; 
+import { OpCodes as LiteClientOpCodes } from "./LiteClient";
 export const OpCodes = {
   OP_CHECK_TRANSACTION: 0x91d555f7,
   OP_TRANSACTION_CHECKED: 0x756adff1,
@@ -39,24 +39,37 @@ export class TxChecker implements Contract {
     return new TxChecker(contractAddress(workchain, init), init);
   }
 
-  static packCurrentBlock(
-    fileHash: string,
-    prunedBlock: Cell,
-    signatures: Cell,
-  ): Cell {
+  static packCurrentBlock(args: {
+    fileHash: string;
+    prunedBlock: Cell;
+    signatures: Cell;
+  }): Cell {
     return beginCell()
       .storeRef(
         beginCell()
-          .storeBuffer(Buffer.from(fileHash, "hex"), 32)
-          .storeRef(prunedBlock)
+          .storeBuffer(Buffer.from(args.fileHash, "hex"), 32)
+          .storeRef(args.prunedBlock)
           .endCell(),
       )
-      .storeRef(signatures)
+      .storeRef(args.signatures)
       .endCell();
+  }
+
+  static packTransaction(args: {
+    txhash: string;
+    accountAddr: string;
+    txlt: bigint;
+  }): Cell {
+    return beginCell()
+    .storeUint(BigInt('0x' + args.txhash), 256)
+    .storeUint(BigInt('0x' + args.accountAddr), 256)
+    .storeUint(args.txlt, 64)
+    .endCell();
   }
 
   async sendDeploy(provider: ContractProvider, via: Sender, value: bigint) {
     await provider.internal(via, {
+      bounce: false,
       value,
       sendMode: SendMode.PAY_GAS_SEPARATELY,
       body: beginCell().endCell(),
