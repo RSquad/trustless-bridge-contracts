@@ -1,7 +1,5 @@
 const int err::unknown_operation = 0xffff;
 const int err::invalid_block_tag = 101;
-const int err::no_accounts = 102;
-const int err::no_txs = 103;
 const int err::invalid_account_block = 104;
 const int err::wrong_validator_magic = 105;
 const int err::is_not_keyblock = 106;
@@ -16,3 +14,6 @@ const int err::tx_hash_mismatch = 114;
 const int err::invalid_merkle_proof_cell = 115;
 const int err::unauthorized_sender = 116;
 const int err::wrong_merkle_proof = 116;
+const int err::block_extra_expected = 117;
+const int err::unexpected_exotic = 118;
+const int err::config_34_not_found = 119;

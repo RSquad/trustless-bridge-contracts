@@ -4,11 +4,11 @@ import { OpCodes, TxChecker } from "../wrappers/TxChecker";
 import { OpCodes as LiteClientOpCodes } from "../wrappers/LiteClient";
 import "@ton/test-utils";
 import { compile } from "@ton/blueprint";
-import { readByFileHash } from "./utils";
+import { readBockFromFile } from "./utils";
 
 // Block (-1,8000000000000000,27626103)
-const checkBlockCell = readByFileHash("block_proof_27626103", "cliexample");
-const checkBlockSignaturesCell = readByFileHash(
+const checkBlockCell = readBockFromFile("pruned_block_27626103", "cliexample");
+const checkBlockSignaturesCell = readBockFromFile(
   "block_signatures_27626103",
   "cliexample",
 );
@@ -17,7 +17,7 @@ const BLOCK_FILE_HASH =
 const BLOCK_ROOT_HASH =
   "FE48DA5050192E5B19FD2A0DFF10932E7CB5650E71F58A266EF1023E541D95DD";
 // Transaction from block (-1,8000000000000000,27626103)
-const txProofCell = readByFileHash(
+const txProofCell = readBockFromFile(
   "txproof_E36ABF_block_27626103",
   "cliexample",
 );
@@ -37,16 +37,16 @@ describe("TxChecker", () => {
   let blockchain: Blockchain;
   let deployer: SandboxContract<TreasuryContract>;
   let txChecker: SandboxContract<TxChecker>;
-  let liteClient: SandboxContract<TreasuryContract>;
+  let liteClientMock: SandboxContract<TreasuryContract>;
 
   beforeEach(async () => {
     blockchain = await Blockchain.create();
     deployer = await blockchain.treasury("deployer");
-    liteClient = await blockchain.treasury("liteClient");
+    liteClientMock = await blockchain.treasury("liteClientMock");
     txChecker = blockchain.openContract(
       TxChecker.createFromConfig(
         {
-          liteClientAddress: liteClient.address,
+          liteClientAddress: liteClientMock.address,
         },
         code,
       ),
@@ -64,11 +64,11 @@ describe("TxChecker", () => {
   });
 
   it("check transaction", async () => {
-    const currentBlockCell = TxChecker.packCurrentBlock(
-      BLOCK_FILE_HASH,
-      checkBlockCell,
-      checkBlockSignaturesCell,
-    );
+    const currentBlockCell = TxChecker.packCurrentBlock({
+      fileHash: BLOCK_FILE_HASH,
+      prunedBlock: checkBlockCell,
+      signatures: checkBlockSignaturesCell,
+    });
     const transactionCell = beginCell()
       .storeUint(BigInt(TX_HASH), 256)
       .storeUint(BigInt(ACCOUNT_ADDR), 256)
@@ -91,7 +91,7 @@ describe("TxChecker", () => {
     });
     expect(result.transactions).toHaveTransaction({
       from: txChecker.address,
-      to: liteClient.address,
+      to: liteClientMock.address,
       success: true,
       op: LiteClientOpCodes.OP_CHECKBLOCK,
       body: beginCell()
@@ -104,7 +104,7 @@ describe("TxChecker", () => {
     });
 
     const res = await txChecker.sendCheckBlockAnswer(
-      liteClient.getSender(),
+      liteClientMock.getSender(),
       toNano(0.1),
       {
         blockHash: BLOCK_ROOT_HASH,
@@ -113,7 +113,7 @@ describe("TxChecker", () => {
       },
     );
     expect(res.transactions).toHaveTransaction({
-      from: liteClient.address,
+      from: liteClientMock.address,
       to: txChecker.address,
       success: true,
       op: LiteClientOpCodes.OP_CHECKBLOCK_ANSWER,
