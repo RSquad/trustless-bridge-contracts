@@ -1,0 +1,1 @@
+process.env.PRINT_FEES = true;
