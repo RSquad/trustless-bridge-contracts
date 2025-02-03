@@ -12,6 +12,7 @@
   ;;   file_hash:uint256
   ;;   pruned_block:^Cell
   ;; ]
+  ;; signatures:^Cell
   slice block_data = in_msg_body~load_ref_slice();
   cell signatures = in_msg_body~load_ref();
   int file_hash = block_data~load_uint(256);

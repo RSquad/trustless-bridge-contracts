@@ -1,10 +1,4 @@
-import {
-  Builder,
-  Cell,
-  Dictionary,
-  DictionaryValue,
-  Slice,
-} from "@ton/core";
+import { Builder, Cell, Dictionary, DictionaryValue, Slice } from "@ton/core";
 
 import fs from "fs";
 import path from "path";
@@ -55,14 +49,20 @@ export const readBockFromFile = (fileHash: string, dir = "keyblocks") => {
   return Cell.fromBoc(bufBoc)[0];
 };
 
-export const extractValidatorsConfig = (cell: Cell, configId = 34, allowExotic = false): {
-    rootHash: Buffer;
-    validators?: Cell;
-    shortValidators: Dictionary<Buffer, bigint>;
-    totalWeight: bigint;
-    validatorsHash: Buffer;
-    vals: {publicKey: Buffer; weight: bigint; }[],
-} | undefined => {
+export const extractValidatorsConfig = (
+  cell: Cell,
+  configId = 34,
+  allowExotic = false,
+):
+  | {
+      rootHash: Buffer;
+      validators?: Cell;
+      shortValidators: Dictionary<Buffer, bigint>;
+      totalWeight: bigint;
+      validatorsHash: Buffer;
+      vals: { publicKey: Buffer; weight: bigint }[];
+    }
+  | undefined => {
   let slice = cell.beginParse(allowExotic);
   if (allowExotic) {
     slice = slice.loadRef().beginParse();
@@ -120,7 +120,7 @@ export const extractValidatorsConfig = (cell: Cell, configId = 34, allowExotic =
   let vals: {
     publicKey: Buffer<ArrayBufferLike>;
     weight: bigint;
-}[] = []
+  }[] = [];
   if (validators) {
     const valSlice = validators.beginParse();
     const valsType = valSlice.loadUint(8);
@@ -165,11 +165,3 @@ export const extractValidatorsConfig = (cell: Cell, configId = 34, allowExotic =
     vals: vals,
   };
 };
-
-export function readLocalBoc(name: string, pruned = true) {
-    const block = readByFileHash(pruned ? name + '_pruned' : name, "cliexample");
-    const epoch = extractEpoch(block, 34, pruned);
-    const signatures = readByFileHash(name + "_sig", "cliexample");
-  
-    return { block, epoch, signatures };
-  }

@@ -10,12 +10,12 @@ import { OpCodes as LiteClientOpCodes } from "../wrappers/LiteClient";
 import { OpCodes, TxChecker } from "../wrappers/TxChecker";
 import { compile } from "@ton/blueprint";
 import { Address, beginCell, Cell, toNano } from "@ton/core";
-import { extractEpoch, readByFileHash } from "./utils";
+import { extractValidatorsConfig, readBockFromFile } from "./utils";
 
 // Block at start of the epoch
 //(1,8000000000000000,27620817)
-const initKeyBlock = readByFileHash("pruned_block_27620817", "cliexample");
-const INITIAL_SETUP = extractEpoch(initKeyBlock, 34, true)!;
+const initKeyBlock = readBockFromFile("pruned_block_27620817", "cliexample");
+const INITIAL_SETUP = extractValidatorsConfig(initKeyBlock, 34, true)!;
 // Array of test cases for checkTransaction
 
 type CHECK_TRANSACTION_TEST = {
@@ -32,12 +32,12 @@ const TEST_CASES: CHECK_TRANSACTION_TEST[] = [
         "5555555555555555555555555555555555555555555555555555555555555555",
       txlt: 30803209000003n,
     }),
-    proof: readByFileHash("txproof_E36ABF_block_27626103", "cliexample"),
+    proof: readBockFromFile("txproof_E36ABF_block_27626103", "cliexample"),
     currentBlock: TxChecker.packCurrentBlock({
       fileHash:
         "3DB14851B77E1DA2D7331B340314DC7C0D6BB1FCF0274C361F3B1633A86BB8AD",
-      prunedBlock: readByFileHash("pruned_block_27626103", "cliexample"),
-      signatures: readByFileHash("block_signatures_27626103", "cliexample"),
+      prunedBlock: readBockFromFile("pruned_block_27626103", "cliexample"),
+      signatures: readBockFromFile("block_signatures_27626103", "cliexample"),
     }),
   },
 ];

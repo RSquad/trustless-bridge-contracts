@@ -44,8 +44,8 @@ int block_info::load_not_master_flag(slice block_info) impure inline {
   return signed_weight * 3 >= 2 * g::total_weight;
 }
 
-(slice) load_mc_keyblock_extra(slice cs) impure inline {
-    slice extra = cs.load_ref_3();
+slice load_mc_keyblock_extra(slice block) impure inline {
+    cell extra = block.load_ref_3();
     (slice extra_cs, int exotic?) = extra.begin_parse_special();
     throw_if(err::unexpected_exotic, exotic?);
     ;; validate extra tag
@@ -53,9 +53,8 @@ int block_info::load_not_master_flag(slice block_info) impure inline {
     slice custom_cs = extra_cs.load_ref_3().begin_parse();
     ;; validate custom_magic
     throw_unless(err::wrong_block_custom, custom_cs~load_uint(16) == 0xcca5);
-    int is_keyblock = custom_s~load_uint(1);
-    throw_unless(err::is_not_keyblock, is_keyblock);
-    return custom_s;
+    throw_unless(err::is_not_keyblock, custom_cs~load_uint(1));
+    return custom_cs;
 }
 
 (cell, int) load_vset(slice block) impure inline {
@@ -67,5 +66,5 @@ int block_info::load_not_master_flag(slice block_info) impure inline {
   ;; valsType, utimeSince, utimeUntil
   config_34_s~skip_bits(88);
   int main = config_34_s~load_uint(16);
-  return (config_34_s~load_dict(), main);
+  return (config_34_s~load_ref(), main);
 }
