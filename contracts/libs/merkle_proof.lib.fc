@@ -3,12 +3,13 @@
 #include "errors.lib.fc";
 #include "hashmap.lib.fc";
 
-(cell, int) merkle_proof::load_cell(cell c) impure inline {
-  (slice proof_slice, int exotic?) = c.begin_parse_special();
+(int,  ;; first ref cell hash
+ slice ;; first ref cell (as slice) loaded from merkle proof cell 
+) merkle_proof::load_cell(cell c) impure inline {
+  (slice proof_cs, int exotic?) = c.begin_parse_special();
   throw_unless(err::invalid_merkle_proof_cell, exotic?);
-  throw_unless(err::invalid_merkle_proof_cell, proof_slice~load_uint(8) == 3);
-  cell pruned_cell = proof_slice~load_ref();
-  return (pruned_cell, pruned_cell.cell_hash_0());
+  throw_unless(err::invalid_merkle_proof_cell, proof_cs~load_uint(8) == 3);
+  return (proof_cs~load_uint(256), proof_cs~load_ref_slice());
 }
 
 cell merkle_proof::find_tx(
@@ -16,8 +17,7 @@ cell merkle_proof::find_tx(
   slice account_addr,
   slice tx_lt
 ) impure inline {
-  (cell ref_cell, int ref_hash) = merkle_proof.merkle_proof::load_cell();
-  slice block = ref_cell.begin_parse();
+  (_, slice block) = merkle_proof.merkle_proof::load_cell();
   int tag = block~load_uint(32);
   throw_unless(err::invalid_block_tag, tag == 0x11ef55aa);
   ;; load ref with extra

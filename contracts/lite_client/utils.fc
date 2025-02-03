@@ -1,6 +1,7 @@
 #include "../libs/tvm.lib.fc";
 
-(int) check_is_not_masterchain_block(slice block_info) inline {
+int block_info::load_not_master_flag(slice block_info) impure inline {
+    ;; validate block tag
     throw_unless(err::wrong_block_info, block_info~load_uint(32) == 0x9bc7a987);
     block_info~skip_bits(32);
     return block_info~load_uint(1);
@@ -15,7 +16,7 @@
   .begin_parse();
 }
 
-(int) check_block_signatures(slice signing_message, cell signatures) inline {
+(int) check_block_signatures(slice signing_message, cell signatures) impure inline_ref {
   int signed_weight = 0;
   
   ( int pubkey,
@@ -43,27 +44,28 @@
   return signed_weight * 3 >= 2 * g::total_weight;
 }
 
-(slice) load_block_custom(slice cs) inline {
-    throw_if(err::block_extra_expected, cs.slice_refs() < 4);
-    cell extra_c = cs.load_ref_3();
-    (slice extra_s, int exotic?) = extra_c.begin_parse_special();
+(slice) load_mc_keyblock_extra(slice cs) impure inline {
+    slice extra = cs.load_ref_3();
+    (slice extra_cs, int exotic?) = extra.begin_parse_special();
     throw_if(err::unexpected_exotic, exotic?);
-    throw_unless(err::wrong_block_extra, extra_s~load_uint(32) == 0x4a33f6fd);
-    slice custom_s = extra_s.load_ref_3().begin_parse();
-    throw_unless(err::wrong_block_custom, custom_s~load_uint(16) == 0xcca5);
+    ;; validate extra tag
+    throw_unless(err::wrong_block_extra, extra_cs~load_uint(32) == 0x4a33f6fd);
+    slice custom_cs = extra_cs.load_ref_3().begin_parse();
+    ;; validate custom_magic
+    throw_unless(err::wrong_block_custom, custom_cs~load_uint(16) == 0xcca5);
     int is_keyblock = custom_s~load_uint(1);
     throw_unless(err::is_not_keyblock, is_keyblock);
     return custom_s;
 }
 
-;; load config_34 from Block Custom
-(cell, int) load_validators_list(slice custom_s) inline {
-    cell config = custom_s.load_ref_3();
-    (cell config_34, int flag?) = config.udict_get_ref?(32, 34);
-    throw_unless(err::config_34_not_found, flag?);
-    slice config_34_s = config_34.begin_parse();
-    ;; valsType, utimeSince, utimeUntil, total
-    config_34_s~skip_bits(88);
-    int main = config_34_s~load_uint(16);
-    return (config_34_s~load_ref(), main);
+(cell, int) load_vset(slice block) impure inline {
+  slice mc_block_extra = block.load_mc_keyblock_extra();
+  cell config = mc_block_extra.load_ref_3();
+  (cell config_34, int flag?) = config.udict_get_ref?(32, 34);
+  throw_unless(err::config_34_not_found, flag?);
+  slice config_34_s = config_34.begin_parse();
+  ;; valsType, utimeSince, utimeUntil
+  config_34_s~skip_bits(88);
+  int main = config_34_s~load_uint(16);
+  return (config_34_s~load_dict(), main);
 }
