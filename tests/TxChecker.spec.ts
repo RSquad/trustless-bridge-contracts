@@ -4,11 +4,11 @@ import { OpCodes, TxChecker } from "../wrappers/TxChecker";
 import { OpCodes as LiteClientOpCodes } from "../wrappers/LiteClient";
 import "@ton/test-utils";
 import { compile } from "@ton/blueprint";
-import { readByFileHash } from "./utils";
+import { readBockFromFile } from "./utils";
 
 // Block (-1,8000000000000000,27626103)
-const checkBlockCell = readByFileHash("block_proof_27626103", "cliexample");
-const checkBlockSignaturesCell = readByFileHash(
+const checkBlockCell = readBockFromFile("block_proof_27626103", "cliexample");
+const checkBlockSignaturesCell = readBockFromFile(
   "block_signatures_27626103",
   "cliexample",
 );
@@ -17,7 +17,7 @@ const BLOCK_FILE_HASH =
 const BLOCK_ROOT_HASH =
   "FE48DA5050192E5B19FD2A0DFF10932E7CB5650E71F58A266EF1023E541D95DD";
 // Transaction from block (-1,8000000000000000,27626103)
-const txProofCell = readByFileHash(
+const txProofCell = readBockFromFile(
   "txproof_E36ABF_block_27626103",
   "cliexample",
 );

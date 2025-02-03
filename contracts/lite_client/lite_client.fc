@@ -6,17 +6,21 @@
 #include "storage.fc";
 #include "utils.fc";
 
-(int, int, slice, cell) load_in_msg_body(slice in_msg_body) inline {
-  slice block_proof = in_msg_body~load_ref_slice();
-  cell block_merkle_proof = block_proof~load_ref();
-  int file_hash = block_proof~load_uint(256);
-  (slice cs, int special) = block_merkle_proof.begin_parse_special();
+(slice, (int, int, slice, cell)) ~load_in_msg_body(slice in_msg_body) inline {
+  slice block = in_msg_body~load_ref_slice();
+  cell signatures   = in_msg_body~load_ref();
+  ;; block:^ [
+  ;;   file_hash:uint256
+  ;;   pruned_block:^Cell
+  ;; ]
+  int file_hash = block~load_uint(256);
+  cell pruned_block = block~load_ref();
+  (slice cs, int special) = pruned_block.begin_parse_special();
   throw_unless(err::wrong_merkle_proof, special);
   throw_if(err::wrong_merkle_proof, cs~load_uint(8) != 3);
   int root_hash = cs~load_uint(256);
   slice block_slice = cs~load_ref_slice();
-  cell signatures = in_msg_body~load_ref();
-  return(root_hash, file_hash, block_slice, signatures);
+  return(in_msg_body, (root_hash, file_hash, block_slice, signatures));
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
@@ -30,8 +34,8 @@
   }
 
   slice sender_address = cs~load_msg_addr();
-  int op = in_msg_body~load_uint(32);
-  int query_id = in_msg_body~load_uint(64);
+  int op = in_msg_body~load_op();
+  int query_id = in_msg_body~load_query_id();
 
   if ( op == op::new_key_block ) {
     ;; new_key_block#11a78ffe 
@@ -47,17 +51,20 @@
       int file_hash,
       slice block_slice,
       cell signatures
-    ) = load_in_msg_body(in_msg_body);
+    ) = in_msg_body~load_in_msg_body();
 
     ;; also checks if the block is keyblock
-    slice custom_s = load_block_custom(block_slice);
+    slice custom_s = block_slice.load_block_custom();
 
-    slice signing_message = build_signing_message(root_hash, file_hash);
     load_globals();
-    int block_signed? = check_block_signatures(signing_message, signatures);
+    
+    int block_signed? = check_block_signatures(
+      build_signing_message(root_hash, file_hash), 
+      signatures
+    );
     throw_unless(err::unsigned_block, block_signed?);
 
-    (cell validators_list, int main) = load_validators_list(custom_s);
+    (cell validators_list, int main) = custom_s.load_validators_list();
     update_validators_dict(validators_list, main);
   
     cell msg = build_message(
@@ -91,17 +98,19 @@
       int file_hash,
       slice block_slice,
       cell signatures
-    ) = load_in_msg_body(in_msg_body);
+    ) = in_msg_body~load_in_msg_body();
 
     throw_if(
       err::is_not_masterchain_block, 
       check_is_not_masterchain_block(block_slice~load_ref_slice())
     );
-    slice signing_message = build_signing_message(root_hash, file_hash);
-    load_globals();
 
+    load_globals();
     ;; if sign is correct, block in current epoch
-    int block_signed? = check_block_signatures(signing_message, signatures);
+    int block_signed? = check_block_signatures(
+      build_signing_message(root_hash, file_hash), 
+      signatures
+    );
     throw_unless(err::unsigned_block, block_signed?);
     
     cell msg = build_message(

@@ -10,7 +10,6 @@ import fs from "fs";
 import path from "path";
 
 function readPublicKey(slice: Slice) {
-  // 8e81278a
   if (slice.loadUint(32) !== 0x8e81278a) {
     throw Error("Invalid config");
   }
@@ -49,14 +48,14 @@ export const ValidatorDescriptionDictValue: DictionaryValue<{
   },
 };
 
-export const readByFileHash = (fileHash: string, dir = "keyblocks") => {
+export const readBockFromFile = (fileHash: string, dir = "keyblocks") => {
   const bufBoc = fs.readFileSync(
     path.resolve(__dirname, `${dir}/${fileHash}.boc`),
   );
   return Cell.fromBoc(bufBoc)[0];
 };
 
-export const extractEpoch = (cell: Cell, configId = 34, allowExotic = false) => {
+export const extractValidatorsConfig = (cell: Cell, configId = 34, allowExotic = false) => {
   let slice = cell.beginParse(allowExotic);
   if (allowExotic) {
     slice = slice.loadRef().beginParse();
@@ -128,9 +127,7 @@ export const extractEpoch = (cell: Cell, configId = 34, allowExotic = false) => 
     if (main < 1) {
       throw Error("main < 1");
     }
-    const weight = valSlice.loadUintBig(64);;
-    // totalWeight = valSlice.loadUintBig(64);
-    // 64 + 16 + 16 + 32 + 32 + 8 = 192
+    const weight = valSlice.loadUintBig(64);
 
     const validatosCell = valSlice.preloadRef();
     validatorsHash = validatosCell.hash(3);

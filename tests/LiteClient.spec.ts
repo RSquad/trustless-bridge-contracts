@@ -6,12 +6,12 @@ import {
 import { Blockchain, SandboxContract, TreasuryContract } from "@ton/sandbox";
 import "@ton/test-utils";
 import { LiteClient, OpCodes } from "../wrappers/LiteClient";
-import { extractEpoch, readByFileHash } from "./utils";
+import { extractValidatorsConfig, readBockFromFile } from "./utils";
 
 function readLocalBoc(name: string, pruned = true) {
-  const block = readByFileHash(pruned ? name + '_pruned' : name, "cliexample");
-  const epoch = extractEpoch(block, 34, pruned);
-  const signatures = readByFileHash(name + "_sig", "cliexample");
+  const block = readBockFromFile(pruned ? name + '_pruned' : name, "cliexample");
+  const epoch = extractValidatorsConfig(block, 34, pruned);
+  const signatures = readBockFromFile(name + "_sig", "cliexample");
 
   return { block, epoch, signatures };
 }
@@ -75,6 +75,22 @@ describe("LiteClientCLI", () => {
       to: liteClient.address,
       deploy: true,
       success: true,
+    });
+  });
+
+  it("should fail check same keyblock (wrong epoch)", async () => {
+    const result = await liteClient.sendNewKeyBlock(
+      deployer.getSender(),
+      toNano(0.1),
+      keyblock_1.block,
+      keyblock_1.signatures,
+      Buffer.from(keyblock_1_filehash, "hex"),
+    );
+    expect(result.transactions).toHaveTransaction({
+      from: deployer.address,
+      to: liteClient.address,
+      success: false,
+      exitCode: 112,
     });
   });
 
@@ -257,6 +273,39 @@ describe("LiteClientCLI", () => {
       to: deployer.address,
       op: OpCodes.OP_CHECKBLOCK_ANSWER,
       success: true,
+    });
+  });
+
+  it("should fail check block of old epoch", async () => {
+    const result = await liteClient.sendCheckBlock(
+      deployer.getSender(),
+      toNano(0.1),
+      block_1.block,
+      block_1.signatures,
+      Buffer.from(block_2_filehash, "hex"),
+    );
+    expect(result.transactions).toHaveTransaction({
+      from: deployer.address,
+      to: liteClient.address,
+      success: false,
+      exitCode: 112,
+    });
+  });
+
+  it("should fail op new_key_block with not keyblock", async () => {
+    const result = await liteClient.sendNewKeyBlock(
+      deployer.getSender(),
+      toNano(0.1),
+      block_2.block,
+      block_2.signatures,
+      Buffer.from(block_2_filehash, "hex"),
+    );
+
+    expect(result.transactions).toHaveTransaction({
+      from: deployer.address,
+      to: liteClient.address,
+      success: false,
+      exitCode: 118,
     });
   });
 });
