@@ -1,9 +1,0 @@
-;; Answer bit, set in response opcodes to indicate an answer for request.
-const int ANSWER_BIT = 0x80000000;
-;; 0b011000 tag - 0, ihr_disabled - 1, bounce - 1, bounced - 0, src = adr_none$00
-const int BOUNCEABLE = 0x18;
-;; 0b010000 tag - 0, ihr_disabled - 1, bounce - 0, bounced - 0, src = adr_none$00
-const int NON_BOUNCEABLE = 0x10;
-
-const op::common::upgrade = "op::common::upgrade"c & (~ ANSWER_BIT);
-const op::common::topup = "op::common::topup"c;

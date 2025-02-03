@@ -20,7 +20,6 @@
 
 #include "reserve_mode.const.fc";
 #include "send_mode.const.fc";
-#include "common.const.fc";
 
 ;; Builds TON message header.
 builder msg_header(
@@ -55,38 +54,6 @@ builder build_message(
   }
   msg_b = msg_b.store_uint(1, 1).store_ref(body);
   return msg_b;
-}
-
-;; Sends change with defined opcode to destination address.
-() send_change(
-  slice dest, ;; destination address
-  int op, ;; operation code
-  int query_id, ;; ID of the current processing deposit
-  int mode ;; send mode
-) impure inline {
-  var msg_b = build_message(dest, 0, false, null(), null());
-  cell msg = msg_b.store_uint(0, 1)
-    .store_uint(op | ANSWER_BIT, 32)
-    .store_uint(query_id, 64)
-    .end_cell();
-  send_raw_message(msg, mode | send_mode::ignore_errors);
-}
-
-;; Sends change with defined opcode to destination address.
-() send_change_with_payload(
-  slice dest, ;; destination address
-  int op, ;; operation code
-  int query_id, ;; ID of the current processing deposit
-  int mode, ;; send mode
-  builder payload
-) impure inline_ref {
-  var msg_b = build_message(dest, 0, false, null(), null());
-  cell msg = msg_b.store_uint(0, 1)
-    .store_uint(op | ANSWER_BIT, 32)
-    .store_uint(query_id, 64)
-    .store_builder(payload)
-    .end_cell();
-  send_raw_message(msg, mode | send_mode::ignore_errors);
 }
 
 ;; Sends TON external outbound message.
