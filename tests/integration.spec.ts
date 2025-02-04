@@ -10,12 +10,12 @@ import { OpCodes as LiteClientOpCodes } from "../wrappers/LiteClient";
 import { OpCodes, TxChecker } from "../wrappers/TxChecker";
 import { compile } from "@ton/blueprint";
 import { Address, beginCell, Cell, toNano } from "@ton/core";
-import { extractValidatorsConfig, readBockFromFile } from "./utils";
+import { extractValidatorsConfig, readBocFromFile } from "./utils";
 import { FeeCollector } from "./fee-collector";
 
 // Block at start of the epoch
 //(1,8000000000000000,27620817)
-const initKeyBlock = readBockFromFile("pruned_block_27620817", "cliexample");
+const initKeyBlock = readBocFromFile("pruned_block_27620817", "samples");
 const INITIAL_SETUP = extractValidatorsConfig(initKeyBlock, 34, true)!;
 // Array of test cases for checkTransaction
 
@@ -32,21 +32,21 @@ const createTestCase = (
   accountAddr: string,
   txlt: bigint,
 ): [string, CHECK_TRANSACTION_TEST] => {
-  const dir = "cliexample";
+  const dir = "samples";
   return [txhash.slice(0, 6), {
     transaction: TxChecker.packTransaction({
       txhash,
       accountAddr,
       txlt,
     }),
-    proof: readBockFromFile(
+    proof: readBocFromFile(
       `txproof_${txhash.slice(0, 6)}_block_${seqno.toString()}`,
       dir,
     ),
     currentBlock: TxChecker.packCurrentBlock({
       fileHash,
-      prunedBlock: readBockFromFile(`pruned_block_${seqno.toString()}`, dir),
-      signatures: readBockFromFile(`block_signatures_${seqno.toString()}`, dir),
+      prunedBlock: readBocFromFile(`pruned_block_${seqno.toString()}`, dir),
+      signatures: readBocFromFile(`block_signatures_${seqno.toString()}`, dir),
     }),
   }];
 };
