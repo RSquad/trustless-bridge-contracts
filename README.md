@@ -93,3 +93,20 @@ check_transaction#91d555f7
 
 ## Gas Usage:
 ![img](gas.png)
+
+## Example of usage
+
+### TON FASTNET
+
+LiteClient: Ef_cmIsszQinqjDnK4LIib3vSBE8Zhf-ytgRJDGispoD-Et5
+
+TxChecker: Ef8zZWfeh22ib982EIgo_FZM0n2Iym1WHFBRBA_H7BEfsoMK
+
+### TON TESTNET
+
+LiteClient: EQBGWoImJJ8Uw4Lz0b2yXjpOf31awQfXHJthrYB4zppnL3c1
+
+TxChecker: EQCEILr1N8ey9Ar-9OtnCq8A4v217lsE0pJuEZgrZOStAVVa
+
+Transaction history with demonstration of successful and unsuccessful checks of blocks and transactions:
+[testcases.md](https://github.com/RSquad/trustless-bridge-cli/blob/master/testcases.md)
