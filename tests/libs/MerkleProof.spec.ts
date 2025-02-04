@@ -46,7 +46,7 @@ describe('MerkleProof', () => {
 
     it('find tx 3', async () => {
         // 	(-1,8000000000000000,27626103)
-        const blockHex = fs.readFileSync("./tests/cliexample/txproof_E36ABF_block_27626103.boc", "hex");
+        const blockHex = fs.readFileSync("./tests/samples/txproof_E36ABF_block_27626103.boc", "hex");
         const expectedHash = "E36ABF1A2DC3C028C117E7C979E29FF51D71D4EECF51DB910BA4FCC8D05B4C3F".toLowerCase();
         const accountAddr = "5555555555555555555555555555555555555555555555555555555555555555";
         const txLogicalTime = 30803209000003n;

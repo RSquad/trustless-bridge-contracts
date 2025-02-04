@@ -42,9 +42,9 @@ export const ValidatorDescriptionDictValue: DictionaryValue<{
   },
 };
 
-export const readBockFromFile = (fileHash: string, dir = "keyblocks") => {
+export const readBocFromFile = (fileName: string, dir = "keyblocks") => {
   const bufBoc = fs.readFileSync(
-    path.resolve(__dirname, `${dir}/${fileHash}.boc`),
+    path.resolve(__dirname, `${dir}/${fileName}.boc`),
   );
   return Cell.fromBoc(bufBoc)[0];
 };

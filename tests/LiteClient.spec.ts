@@ -3,40 +3,45 @@ import { Cell, toNano } from "@ton/core";
 import { Blockchain, SandboxContract, TreasuryContract } from "@ton/sandbox";
 import "@ton/test-utils";
 import { LiteClient, OpCodes } from "../wrappers/LiteClient";
-import { extractValidatorsConfig, readBockFromFile } from "./utils";
+import { extractValidatorsConfig, readBocFromFile } from "./utils";
 
 function readLocalBoc(name: string, pruned = true) {
-  const block = readBockFromFile(
+  const block = readBocFromFile(
     pruned ? name + "_pruned" : name,
-    "cliexample",
+    "samples",
   );
   const epoch = extractValidatorsConfig(block, 34, pruned);
-  const signatures = readBockFromFile(name + "_sig", "cliexample");
+  const signatures = readBocFromFile(name + "_sig", "samples");
 
   return { block, epoch, signatures };
 }
-
-const keyblock_1 = readLocalBoc("1_keyblock");
 const keyblock_765944 = readLocalBoc("block_765944");
 const keyblock_850955 = readLocalBoc("block_850955");
-
+// block (0,2000000000000000,27678205)
+const keyblock_1 = readLocalBoc("1_keyblock");
 const keyblock_1_filehash =
   "CBE1CAE785474647DD3DD8DB2C04DBCCAA8AE84FF898AB311CA7E74E90A7D1C5";
+// block (0,2000000000000000,27678206)
 const block_1 = readLocalBoc("1_check_block");
 const block_1_filehash =
   "782CA5563423A011FBEFCBC4F65A41FFDC927A65EDF774E681A5CC48D631CF63";
+// block (0,2000000000000000,27680001)
 const block_1_rand = readLocalBoc("1_check_random_block");
 const block_1_rand_filehash =
   "A0F28E409CEAB410E547B6C4995758A41EB5C3212525E4752C6DBAA6D5AA8455";
+// block (0,2000000000000000,27683262)
 const keyblock_2 = readLocalBoc("2_keyblock_36");
 const keyblock_2_filehash =
   "510B82A02A38EB105346E75DDC11B355F52A7C711561D1F58CA953DA4B7FBD53";
+// block (0,2000000000000000,27683263)
 const block_2 = readLocalBoc("2_check_block");
 const block_2_filehash =
   "A1287066E2681F8EC5513FF17AB4371F03BA43C030D354EB0304E7E8989743B8";
+// block (0,2000000000000000,27683981)
 const keyblock_3 = readLocalBoc("3_keyblock");
 const keyblock_3_filehash =
   "EEDC39CC0496E10CE5D691C6C2A05AA3104C9A1FD74BF414B17108D138ADA940";
+// block (0,2000000000000000,27684370)
 const block_3 = readLocalBoc("3_check_block");
 const block_3_filehash =
   "8E7367DCB4DB460D30AF2F7CC187391D9734DD845915A5CC580D7CD01FA41098";
