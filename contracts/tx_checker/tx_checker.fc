@@ -1,0 +1,119 @@
+#include "../libs/stdlib.fc";
+#include "../libs/errors.lib.fc";
+#include "../libs/merkle_proof.lib.fc";
+#include "../libs/ton_msg.lib.fc";
+#include "opcodes.fc";
+#include "../lite_client/opcodes.fc";
+
+global slice g::lite_client_address;
+
+() load_globals() impure {
+  slice ds = get_data().begin_parse();
+  g::lite_client_address = ds~load_msg_addr();
+}
+
+(int,   ;; transaction hash
+ slice, ;; transaction account addr (uint256 as slice)
+ slice  ;; transaction logical time (uint64 as slice)
+) unpack_transaction_cell(cell tx) inline {
+  slice ts = tx.begin_parse();
+  return (ts~load_uint(256), ts~load_bits(256), ts~load_bits(64));
+}
+
+() op_handler::check_transaction(
+  slice sender_address,
+  cell transaction,
+  cell proof,
+  slice current_block
+) impure inline {
+  (int tx_hash, slice account_addr, slice tx_lt) = transaction.unpack_transaction_cell();
+  cell tx = proof.merkle_proof::find_tx(account_addr, tx_lt);
+  throw_unless(err::tx_hash_mismatch, tx.cell_hash() == tx_hash);
+  
+  cell msg = build_message(
+    g::lite_client_address,
+    0,
+    true,
+    null(),
+    begin_cell()
+      .store_uint(op::check_block, 32)
+      .store_uint(0, 64) ;; query_id
+      ;; block:^Cell signatures:^Cell
+      .store_slice(current_block)
+      ;; custom payload
+      .store_slice(sender_address)
+      .store_ref(transaction)
+    .end_cell()
+  ).end_cell();
+  send_raw_message(msg, send_mode::carry_remaining_value);
+  return ();
+}
+
+() op_handler::receive_check_block_ok(
+  slice recipient_address,
+  cell transaction
+) impure inline {
+  cell msg = build_message(
+    recipient_address,
+    0,
+    false,
+    null(),
+    null()
+  ).store_uint(0, 1)
+  .store_uint(op::transaction_checked, 32)
+  .store_ref(transaction)
+  .end_cell();
+  send_raw_message(msg, send_mode::carry_remaining_value);
+  return ();
+}
+
+() recv_internal(
+  int my_balance,
+  int msg_value,
+  cell in_msg_full, 
+  slice in_msg_body
+) impure {
+  ;; accept simple transfer
+  if ( in_msg_body.slice_empty?() ) { 
+    return ();
+  }
+  slice cs = in_msg_full.begin_parse();
+  int flags = cs~load_uint(4);
+  if ( flags & 1 ) { 
+    ;; no handler for bounced message
+    return ();
+  }
+
+  slice sender_address = cs~load_msg_addr();
+  int op = in_msg_body~load_uint(32);
+  load_globals();
+
+  if (op::check_transaction == op) {
+    ;; check_transaction#91d555f7 
+    ;;   transaction:^[tx_hash:uint256 account_addr:uint256 tx_lt:uint64] 
+    ;;   proof:^(MerkleProof Transaction) 
+    ;;   current_block:^[ 
+    ;;      block:^[file_hash:uint256 pruned_block:^Cell] 
+    ;;      signatures:^Cell
+    ;;   ] 
+    ;; = InternalMsgBody;
+    cell transaction = in_msg_body~load_ref();
+    cell proof = in_msg_body~load_ref();
+    slice current_block = in_msg_body~load_ref_slice();
+    op_handler::check_transaction(sender_address, transaction, proof, current_block);
+    return ();
+  } 
+
+  if (op::check_block::success == op) {
+    throw_unless(err::unauthorized_sender, equal_slices_bits(sender_address, g::lite_client_address));
+    ;; skip query_id + block_hash
+    in_msg_body~skip_bits(64 + 256);
+    slice recipient_address = in_msg_body~load_msg_addr();
+    cell transaction = in_msg_body~load_ref();
+    op_handler::receive_check_block_ok(recipient_address, transaction);
+    return ();
+  }
+
+  throw(err::unknown_operation);
+}
+

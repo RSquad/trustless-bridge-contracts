@@ -1,0 +1,75 @@
+#include "../libs/tvm.lib.fc";
+
+int block_info::load_not_master_flag(slice block_info) impure inline {
+    ;; validate block tag
+    throw_unless(err::wrong_block_info, block_info~load_uint(32) == 0x9bc7a987);
+    block_info~skip_bits(32);
+    return block_info~load_uint(1);
+}
+
+(slice) build_signing_message(int root_hash, int file_hash) inline {
+  return begin_cell()
+  .store_uint(0x706e0bc5, 32)
+  .store_uint(root_hash, 256)
+  .store_uint(file_hash, 256)
+  .end_cell()
+  .begin_parse();
+}
+
+(int) check_block_signatures(slice signing_message, cell signatures) impure inline_ref {
+  int signed_weight = 0;
+  
+  ( int pubkey,
+    slice signature,
+    int ok?
+  ) = signatures.udict_get_next?(256, 0);
+
+  while (ok?) {
+    (slice validator_s, int validator_found?) = g::validators.udict_get?(256, pubkey);
+    throw_unless(err::wrong_validators_epoch, validator_found?);
+    if (check_data_signature(signing_message, signature, pubkey)) {
+      int validator_weight = validator_s~load_uint(64);
+      signed_weight = signed_weight + validator_weight;
+      if (signed_weight * 3 >= 2 * g::total_weight) {
+        return -1;
+      }
+    }
+
+    ( pubkey,
+      signature,
+      ok?
+    ) = signatures.udict_get_next?(256, pubkey);
+  }
+
+  return signed_weight * 3 >= 2 * g::total_weight;
+}
+
+slice load_mc_keyblock_extra(slice block) impure inline {
+    cell extra = block.load_ref_3();
+    (slice extra_cs, int exotic?) = extra.begin_parse_special();
+    throw_if(err::unexpected_exotic, exotic?);
+    ;; validate extra tag
+    throw_unless(err::wrong_block_extra, extra_cs~load_uint(32) == 0x4a33f6fd);
+    slice custom_cs = extra_cs.load_ref_3().begin_parse();
+    ;; validate custom_magic
+    throw_unless(err::wrong_block_custom, custom_cs~load_uint(16) == 0xcca5);
+    throw_unless(err::is_not_keyblock, custom_cs~load_uint(1));
+    return custom_cs;
+}
+
+(cell, int) load_vset(slice block) impure inline {
+  slice mc_block_extra = block.load_mc_keyblock_extra();
+  ;; skip ShardHashes
+  mc_block_extra~load_maybe_ref();
+  ;; skip ShardFees
+  mc_block_extra~load_maybe_ref();
+  mc_block_extra~load_ref();
+  cell config = mc_block_extra~load_ref();
+  (cell config_34, int flag?) = config.udict_get_ref?(32, 34);
+  throw_unless(err::config_34_not_found, flag?);
+  slice config_34_s = config_34.begin_parse();
+  ;; valsType, utimeSince, utimeUntil
+  config_34_s~skip_bits(88);
+  int main = config_34_s~load_uint(16);
+  return (config_34_s~load_ref(), main);
+}

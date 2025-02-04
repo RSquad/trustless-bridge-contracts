@@ -1,0 +1,57 @@
+{-
+  ton/ton_msg.lib.fc
+  Library for TON message utilities
+  Copyright (C) 2024 RSquad
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-}
+#pragma version >=0.4.4;
+
+#include "reserve_mode.const.fc";
+#include "send_mode.const.fc";
+
+;; Builds TON message header.
+builder msg_header(
+  slice dest, ;; destination address
+  int value, ;; amount of nanoton to send with message
+  int bounce? ;; bounce flag
+) inline {
+  int header_flags = bounce? ? 0x18 : 0x10;
+  return begin_cell()
+    .store_uint(header_flags, 6)
+    .store_slice(dest)
+    .store_coins(value)
+    .store_uint(0, 1 + 4 + 4 + 64 + 32);
+}
+
+;; Builds TON internal message.
+builder build_message(
+  slice dest, ;; destination address
+  int value, ;; amount of nanoton to send with message
+  int bounce?, ;; bounce flag in message header
+  cell state_init, ;; initial state for deploy messages
+  cell body ;; message body
+) inline {
+  builder msg_b = msg_header(dest, value, bounce?);
+  ifnot (null?(state_init)) {
+    msg_b = msg_b.store_uint(2 + 1, 2).store_ref(state_init);
+  } else {
+    msg_b = msg_b.store_uint(0, 1);
+  }
+  if (null?(body)) {
+    return msg_b;
+  }
+  msg_b = msg_b.store_uint(1, 1).store_ref(body);
+  return msg_b;
+}

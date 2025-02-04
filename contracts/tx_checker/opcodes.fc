@@ -1,0 +1,3 @@
+
+const int op::check_transaction = 0x91d555f7;
+const int op::transaction_checked = 0x756adff1;
