@@ -59,7 +59,12 @@ slice load_mc_keyblock_extra(slice block) impure inline {
 
 (cell, int) load_vset(slice block) impure inline {
   slice mc_block_extra = block.load_mc_keyblock_extra();
-  cell config = mc_block_extra.load_ref_3();
+  ;; skip ShardHashes
+  mc_block_extra.load_maybe_ref();
+  ;; skip ShardFees
+  mc_block_extra.load_maybe_ref();
+  mc_block_extra~load_ref();
+  cell config = mc_block_extra~load_ref();
   (cell config_34, int flag?) = config.udict_get_ref?(32, 34);
   throw_unless(err::config_34_not_found, flag?);
   slice config_34_s = config_34.begin_parse();

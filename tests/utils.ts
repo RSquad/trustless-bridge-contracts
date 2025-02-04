@@ -100,8 +100,8 @@ export const extractValidatorsConfig = (
     return undefined;
   }
 
-  customSlice.loadRef();
-  customSlice.loadRef();
+  customSlice.loadMaybeRef();
+  customSlice.loadMaybeRef();
   customSlice.loadRef();
   const config = customSlice.loadRef();
   const configSlice = config.beginParse();

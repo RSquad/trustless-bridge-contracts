@@ -32,7 +32,7 @@ global int g::epoch_hash;
         int validators::not_end?
       ) = validators_dict.udict_get_nexteq?(16, 0);
       
-      while (index < main) {
+      while (validators::not_end? & (main > 0)) {
         int header =  validator~load_uint(8);
         int p_magic = validator~load_uint(32);
         throw_unless(err::wrong_validators_config, p_magic == 0x8e81278a);
@@ -46,6 +46,7 @@ global int g::epoch_hash;
           validator,
           validators::not_end?
         ) = validators_dict.udict_get_next?(16, index);
+        main -= 1;
       }
     }
 }

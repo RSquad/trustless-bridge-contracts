@@ -38,7 +38,7 @@ global slice g::lite_client_address;
     begin_cell()
       .store_uint(op::check_block, 32)
       .store_uint(0, 64) ;; query_id
-      ;; file_hash:uint256 block:^Cell signatures:^Cell
+      ;; block:^Cell signatures:^Cell
       .store_slice(current_block)
       ;; custom payload
       .store_slice(sender_address)

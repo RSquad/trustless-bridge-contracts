@@ -1,15 +1,15 @@
 import { compile } from "@ton/blueprint";
-import {
-  Cell,
-  toNano,
-} from "@ton/core";
+import { Cell, toNano } from "@ton/core";
 import { Blockchain, SandboxContract, TreasuryContract } from "@ton/sandbox";
 import "@ton/test-utils";
 import { LiteClient, OpCodes } from "../wrappers/LiteClient";
 import { extractValidatorsConfig, readBockFromFile } from "./utils";
 
 function readLocalBoc(name: string, pruned = true) {
-  const block = readBockFromFile(pruned ? name + '_pruned' : name, "cliexample");
+  const block = readBockFromFile(
+    pruned ? name + "_pruned" : name,
+    "cliexample",
+  );
   const epoch = extractValidatorsConfig(block, 34, pruned);
   const signatures = readBockFromFile(name + "_sig", "cliexample");
 
@@ -17,6 +17,9 @@ function readLocalBoc(name: string, pruned = true) {
 }
 
 const keyblock_1 = readLocalBoc("1_keyblock");
+const keyblock_765944 = readLocalBoc("block_765944");
+const keyblock_850955 = readLocalBoc("block_850955");
+
 const keyblock_1_filehash =
   "CBE1CAE785474647DD3DD8DB2C04DBCCAA8AE84FF898AB311CA7E74E90A7D1C5";
 const block_1 = readLocalBoc("1_check_block");
@@ -306,6 +309,38 @@ describe("LiteClientCLI", () => {
       to: liteClient.address,
       success: false,
       exitCode: 118,
+    });
+  });
+
+  it("parse fastnet block with no shards", async () => {
+    const liteClient2 = blockchain.openContract(
+      LiteClient.createFromConfig(
+        {
+          validators: keyblock_765944.epoch!.shortValidators,
+          totalWeight: keyblock_765944.epoch!.totalWeight,
+          validatorsHash: keyblock_765944.epoch!.validatorsHash,
+        },
+        code,
+      ),
+    );
+
+    await liteClient2.sendDeploy(deployer.getSender(), toNano("0.05"));
+    const result = await liteClient2.sendNewKeyBlock(
+      deployer.getSender(),
+      toNano(0.1),
+      keyblock_850955.block,
+      keyblock_850955.signatures,
+      Buffer.from(
+        "A9979387DE0A1508C2228DFB900EC34A1BAD161562ABB0E31E6ABE218E48E65F",
+        "hex",
+      ),
+    );
+
+    expect(result.transactions).toHaveTransaction({
+      from: deployer.address,
+      to: liteClient2.address,
+      success: true,
+      exitCode: 0,
     });
   });
 });
