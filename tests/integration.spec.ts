@@ -11,6 +11,7 @@ import { OpCodes, TxChecker } from "../wrappers/TxChecker";
 import { compile } from "@ton/blueprint";
 import { Address, beginCell, Cell, toNano } from "@ton/core";
 import { extractValidatorsConfig, readBockFromFile } from "./utils";
+import { FeeCollector } from "./fee-collector";
 
 // Block at start of the epoch
 //(1,8000000000000000,27620817)
@@ -30,9 +31,9 @@ const createTestCase = (
   txhash: string,
   accountAddr: string,
   txlt: bigint,
-): CHECK_TRANSACTION_TEST => {
+): [string, CHECK_TRANSACTION_TEST] => {
   const dir = "cliexample";
-  return {
+  return [txhash.slice(0, 6), {
     transaction: TxChecker.packTransaction({
       txhash,
       accountAddr,
@@ -47,10 +48,10 @@ const createTestCase = (
       prunedBlock: readBockFromFile(`pruned_block_${seqno.toString()}`, dir),
       signatures: readBockFromFile(`block_signatures_${seqno.toString()}`, dir),
     }),
-  };
+  }];
 };
 
-const TEST_CASES: CHECK_TRANSACTION_TEST[] = [
+const TEST_CASES: [string, CHECK_TRANSACTION_TEST][] = [
   createTestCase(
     27626103,
     "3DB14851B77E1DA2D7331B340314DC7C0D6BB1FCF0274C361F3B1633A86BB8AD",
@@ -94,6 +95,7 @@ describe("Integration tests", () => {
   let liteClient: SandboxContract<LiteClient>;
   let txChecker: SandboxContract<TxChecker>;
   let result: SendMessageResult | undefined;
+  let feeCollector: FeeCollector;
 
   const expectDeploySuccess = (addr: Address) => {
     expect(result!.transactions).toHaveTransaction({
@@ -103,6 +105,7 @@ describe("Integration tests", () => {
       success: true,
     });
   };
+
   beforeAll(async () => {
     blockchain = await Blockchain.create();
     deployer = await blockchain.treasury("deployer");
@@ -130,6 +133,12 @@ describe("Integration tests", () => {
 
     result = await txChecker.sendDeploy(deployer.getSender(), toNano(0.1));
     expectDeploySuccess(txChecker.address);
+
+    const participants = new Map<string, string>();
+    participants.set(liteClient.address.toString(), "lite_client");
+    participants.set(deployer.address.toString(), "user");
+    participants.set(txChecker.address.toString(), "tx_checker");
+    feeCollector = new FeeCollector(participants, true);
   });
 
   const expectCheckTransactionSucceeded = (
@@ -173,12 +182,17 @@ describe("Integration tests", () => {
     });
   };
 
-  it.each(TEST_CASES)("Check transaction flow (success)", async (t) => {
+  it.each(TEST_CASES)("Check transaction flow %s", async (txhash, t) => {
     const result = await txChecker.sendCheckTransaction(
       deployer.getSender(),
       toNano(0.1),
       t,
     );
     expectCheckTransactionSucceeded(result, t);
+    feeCollector.addTestFees(result);
+  });
+
+  afterAll(() => {
+    feeCollector.printTestFees();
   });
 });
